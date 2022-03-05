@@ -82,8 +82,14 @@ assert(get<"arg2">(v1).size() != 0);
 Can be useful to filter out things that you don't want to expose in an intricate API call somewhere.
 
 ### transform
+Notice: the transform has a rather implicit 'ownership' behaviour (r-values becomes copies and l-values
+become references...). This might change in the future (a possible alternative is to use the
+`std::unwrap_ref_decay_t`-behaviour like the rest of the tuple to control wheter a copy should be made
+or not).
+
 Lazy tuple-transform view. This creates a view of a tuple (`std::tuple` or `named_tuple`) and changes the
-`get<...>`-function to apply a function on the value at the index before returning it.
+`get<...>`-function to apply a function on the value at the index before returning it. (An R-value ref
+will become a copy instead in the transform.)
 Example:
 
 ```c++
