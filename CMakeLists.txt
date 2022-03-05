@@ -1,4 +1,3 @@
-
 cmake_minimum_required(VERSION 3.4)
 
 project(DoocNP VERSION 0.1.0 LANGUAGES CXX)
@@ -23,7 +22,7 @@ if(DOOC_NP_TESTS)
         include(FetchContent)
         FetchContent_Declare(
                 googletest
-                URL https://github.com/google/googletest/archive/e2239ee6043f73722e7aa812a459f54a28552929.zip
+                URL https://github.com/google/googletest/archive/c9461a9b55ba954df0489bab6420eb297bed846b.zip
         )
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

@@ -1,5 +1,4 @@
-
-//          Copyright Robin Söderholm 2021 - 2022.
+//          Copyright Robin SÃ¶derholm 2021 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          https://www.boost.org/LICENSE_1_0.txt)
@@ -14,24 +13,23 @@
 namespace dooc {
 template <std::size_t tN>
 struct template_string {
- private:
- public:
   std::array<char, tN - 1> data_;
   using size_type = std::size_t;
 
-  using string_t = char const[tN];
+  using string_t = char[tN];
 
-  explicit(false) constexpr template_string(string_t const& string_in) {
-    using std::begin, std::end;
-    std::copy(begin(string_in), end(string_in) - 1, begin(data_));
+  explicit(false) constexpr template_string(string_t const& string_in) noexcept {
+    using std::begin;
+    std::copy_n(begin(string_in), data_.size(), begin(data_));
   }
   explicit(false) constexpr template_string(
-      std::array<char const, tN> const& string_in) {
-    std::copy(begin(string_in), end(string_in) - 1, begin(data_));
+      std::array<char const, tN> const& string_in) noexcept {
+    using std::begin;
+    std::copy_n(begin(string_in), data_.size(), begin(data_));
   }
 
   constexpr operator std::string_view() const noexcept {
-    return {data_.data(), tN - 1};
+    return {data_.data(), data_.size()};
   }
 };
 
