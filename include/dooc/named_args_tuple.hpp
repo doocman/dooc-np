@@ -1,5 +1,4 @@
-
-//          Copyright Robin S�derholm 2021 - 2022.
+//          Copyright Robin Söderholm 2021 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          https://www.boost.org/LICENSE_1_0.txt)
@@ -8,6 +7,7 @@
 #define DOOC_WIP_HRP_AND_AP_DOOC_NAMED_ARGS_TUPLE_HPP
 
 #include <algorithm>
+#include <concepts>
 #include <type_traits>
 
 #include <dooc/type_tag.hpp>

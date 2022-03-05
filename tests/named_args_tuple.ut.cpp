@@ -1,21 +1,21 @@
-
-//          Copyright Robin S�derholm 2021 - 2022.
+//          Copyright Robin Söderholm 2021 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          https://www.boost.org/LICENSE_1_0.txt)
 
-#include <gmock/gmock.h>
-
 #include <dooc/named_args_tuple.hpp>
+
 #include <string_view>
+
+#include <gmock/gmock.h>
 
 namespace dooc {
 using namespace ::testing;
+using namespace tuple_literals;
+using namespace std::string_view_literals;
 
 TEST(NamedTuple, Creation)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   auto a2 = "hi there!"sv;
   auto t1 = make_named_args(named_arg<"arg1">(2), named_arg<"arg_2">(a2));
   int &v1 = get<"arg1">(t1);
@@ -26,8 +26,6 @@ TEST(NamedTuple, Creation)  // NOLINT
 
 TEST(NamedTuple, CreationUsingLiterals)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   auto t1 = make_named_args("arg1"_na(2), "arg_2"_na("hi there!"sv));
   int &v1 = get<"arg1">(t1);
   std::string_view &v2 = "arg_2"_from(t1);
@@ -37,15 +35,11 @@ TEST(NamedTuple, CreationUsingLiterals)  // NOLINT
 
 TEST(NamedTuple, GetOnRValue)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   EXPECT_THAT(get<"arg1">(named_tuple("arg1"_na(2))), Eq(2));
 }
 
 TEST(NamedTuple, TupleCat)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   auto t1 = make_named_args("arg1"_na(2), "arg_2"_na("hi there!"sv));
   named_tuple t2 = {"arg3"_na(2.3), "super duper"_na(55)};
   auto t3 = named_tuple_cat(t1, t2);
@@ -57,7 +51,6 @@ TEST(NamedTuple, TupleCat)  // NOLINT
 
 TEST(NamedTuple, ElementExists)  // NOLINT
 {
-  using namespace tuple_literals;
   named_tuple t1 = ("arg1"_na(2));
   static_assert(contains_arg<"arg1">(t1));
   static_assert(!contains_arg<"arg2">(t1));
@@ -65,7 +58,6 @@ TEST(NamedTuple, ElementExists)  // NOLINT
 
 TEST(NamedTuple, GetSlice)  // NOLINT
 {
-  using namespace tuple_literals;
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
   auto t2 = get_slice_view<"a1", "a2">(t1);
   static_assert(contains_arg<"a1">(t2));
@@ -84,7 +76,6 @@ constexpr bool test_that_function_is_allowed<TTuple, TFunc> = true;
 
 TEST(NamedTuple, ChainSpliceTransform)  // NOLINT
 {
-  using namespace tuple_literals;
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
   auto t2 = transform([](auto const &a, auto const &) { return a * 3; },
                       get_slice_view<"a1", "a2">(t1));
@@ -119,8 +110,6 @@ constexpr void foo(int &) {}
 
 TEST(NamedTuple, DifferentOrderCopyAssign)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   using tuple_1_t =
       named_tuple<named_arg_t<"a1", int>, named_arg_t<"a2", double>,
                   named_arg_t<"a3", std::string_view>>;
@@ -149,8 +138,6 @@ TEST(NamedTuple, DifferentOrderCopyAssign)  // NOLINT
 
 TEST(NamedTuple, Apply)  // NOLINT
 {
-  using namespace tuple_literals;
-  using namespace std::string_view_literals;
   constexpr template_string_list_t<"a3", "a1", "a2"> arg_ord{};
   MockFunction<void(int, int, double)> f1;
   MockFunction<void(std::string_view, std::string_view, std::string_view)> f1t;
@@ -165,7 +152,6 @@ TEST(NamedTuple, Apply)  // NOLINT
 
 TEST(NamedTuple, SliceApply)  // NOLINT
 {
-  using namespace tuple_literals;
   MockFunction<void(int, int)> f1;
   EXPECT_CALL(f1, Call(1, 2));
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
@@ -175,7 +161,6 @@ TEST(NamedTuple, SliceApply)  // NOLINT
 
 TEST(NamedTuple, TransformNamed)  // NOLINT
 {
-  using namespace tuple_literals;
   named_tuple t1("a1"_na = 1, "a2"_na = 1., "a3"_na = 3);
   auto t1t = transform(
       []<typename T>(T const &arg, auto const &) { return arg * 2; }, t1);
@@ -198,7 +183,6 @@ TEST(NamedArg, GetFromBunch)  // NOLINT
   EXPECT_THAT(get<"arg1">(arg1, arg2), Eq(3.));
   EXPECT_THAT(get<"arg2">(arg1, arg2), Eq(91.));
 
-  using namespace tuple_literals;
   EXPECT_THAT("arg1"_from(arg1, arg2), Eq(arg1));
 }
 

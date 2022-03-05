@@ -1,12 +1,12 @@
 # Dooc-NP
+
 Dooc Named Parameters.
 
 A header-only library containing string-indexed tuples (`named_tuple`).
-With some help of c++20 concepts and user defined non-type template parameters we also have a decent named
+With some help of C++20 concepts and user defined non-type template parameters we also have a decent named
 argument API framework.
 
 Currently been tested with MSVC 2019.11.10.
-
 
 ## Named argument
 
@@ -84,7 +84,7 @@ Can be useful to filter out things that you don't want to expose in an intricate
 ### transform
 Notice: the transform has a rather implicit 'ownership' behaviour (r-values becomes copies and l-values
 become references...). This might change in the future (a possible alternative is to use the
-`std::unwrap_ref_decay_t`-behaviour like the rest of the tuple to control wheter a copy should be made
+`std::unwrap_ref_decay_t`-behaviour like the rest of the tuple to control whether a copy should be made
 or not).
 
 Lazy tuple-transform view. This creates a view of a tuple (`std::tuple` or `named_tuple`) and changes the
@@ -123,5 +123,3 @@ void bar(named_tuple<named_arg_t<"string", std::string>, named_arg_t<"int", int>
 - Add concept that makes explicit typed functions with named arguments same API-wise as the implicit typed.
 - Test and make it work for GCC and Clang.
 - Make a first release.
-
-
