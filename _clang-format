@@ -1,1 +1,3 @@
-# Please add useful configuration for this library
+
+BasedOnStyle: LLVM
+IndentRequires: true
