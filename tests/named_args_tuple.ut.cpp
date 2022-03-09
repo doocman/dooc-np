@@ -14,6 +14,23 @@ using namespace ::testing;
 using namespace tuple_literals;
 using namespace std::string_view_literals;
 
+template<typename...>
+constexpr bool function_compiles = false;
+template<typename TFunc, typename... Ts>
+requires requires(TFunc f, Ts... ts) {
+    f(ts...);
+}
+constexpr bool function_compiles<TFunc, Ts...> = true;
+
+template<typename... Ts>
+constexpr bool function_compiles_f(Ts&&...) noexcept {
+  return function_compiles<Ts...>;
+}
+
+static_assert(function_compiles_f([] () {}));
+static_assert(function_compiles_f([] (int) {}, 1));
+static_assert(!function_compiles_f([] (int) {}, "not an int"));
+
 TEST(NamedTuple, Creation)  // NOLINT
 {
   auto a2 = "hi there!"sv;
@@ -200,6 +217,28 @@ TEST(NamedArg, FullCoverage)  // NOLINT
   static_assert(!covers_args<template_string_list_t<"arg2", "arg3">, decltype(arg1), decltype(arg2)>);
   static_assert(!covers_args<template_string_list_t<"arg1", "arg2", "arg3">, decltype(arg1), decltype(arg2)>);
 
+}
+
+TEST(NamedArg, TypedFullCoverage) // NOLINT
+{
+  constexpr auto f = []<arg_with_any_name... Ts>
+    requires args_fullfill<
+        arg_list<named_type<int, "arg1">, named_type<std::string_view, "arg2">>,
+        Ts...>(Ts const &...) {};
+  static_assert(
+      arg_list<named_type<int, "arg1">, named_type<std::string_view, "arg2">>::
+          template fullfilled_by<named_arg_t<"arg1", int>,
+                                 named_arg_t<"arg2", std::string_view>>);
+  EXPECT_TRUE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!"sv));
+  EXPECT_TRUE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!"));
+  EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!", "arg3"_na = 2));
+  EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = 444));
+  EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1));
+
+  // This last one may be very hard to assert. Just doing a check on the number of arguments
+  // would fix this particular error, but that would not work if we start to mix in optional
+  // arguments as well...
+  // EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!", "arg1"_na = 2));
 }
 
 }  // namespace dooc
