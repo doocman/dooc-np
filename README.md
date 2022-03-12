@@ -6,7 +6,9 @@ A header-only library containing string-indexed tuples (`named_tuple`).
 With some help of C++20 concepts and user defined non-type template parameters we also have a decent named
 argument API framework.
 
-Currently been tested with MSVC 2019.11.10.
+Tested with MSVC 2019.11.10 and GCC 10.3 (on Ubuntu).
+Does not work with Clang compiler for now (seems to miss the deduction in user defined non-type template arguments
+needed for the `template_string` to work.)
 
 ## Named argument
 

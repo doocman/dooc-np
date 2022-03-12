@@ -11,19 +11,19 @@
 #include <string_view>
 
 namespace dooc {
-template <std::size_t tN>
-struct template_string {
+template <std::size_t tN> struct template_string {
   std::array<char, tN - 1> data_;
   using size_type = std::size_t;
 
   using string_t = char[tN];
 
-  explicit(false) constexpr template_string(string_t const& string_in) noexcept {
+  explicit(false) constexpr template_string(
+      string_t const &string_in) noexcept {
     using std::begin;
     std::copy_n(begin(string_in), data_.size(), begin(data_));
   }
   explicit(false) constexpr template_string(
-      std::array<char const, tN> const& string_in) noexcept {
+      std::array<char const, tN> const &string_in) noexcept {
     using std::begin;
     std::copy_n(begin(string_in), data_.size(), begin(data_));
   }
@@ -34,33 +34,30 @@ struct template_string {
 };
 
 template <std::size_t tN>
-constexpr std::size_t size(template_string<tN> const&) noexcept {
+constexpr std::size_t size(template_string<tN> const &) noexcept {
   return tN;
 }
 
-template <template_string>
-struct template_tag {};
+template <template_string> struct template_tag {};
 
 template <typename T, std::size_t tN>
   requires std::is_convertible_v<T, std::string_view>
-constexpr bool operator==(T const& lhs, template_string<tN> const& rhs) {
+constexpr bool operator==(T const &lhs, template_string<tN> const &rhs) {
   return static_cast<std::string_view>(lhs) ==
          static_cast<std::string_view>(rhs);
 }
 
 template <template_string t1, template_string t2>
-constexpr bool operator==(template_tag<t1> const&, template_tag<t2> const&) {
+constexpr bool operator==(template_tag<t1> const &, template_tag<t2> const &) {
   return t1 == t2;
 }
 
-template <template_string... tTags>
-struct template_string_list_t {
- public:
+template <template_string... tTags> struct template_string_list_t {
+public:
   static constexpr std::size_t size() noexcept { return sizeof...(tTags); }
 };
 
-template <typename>
-constexpr bool is_template_string_list = false;
+template <typename> constexpr bool is_template_string_list = false;
 
 template <template_string... tTags>
 constexpr bool is_template_string_list<template_string_list_t<tTags...>> = true;
@@ -69,6 +66,6 @@ template <typename T>
 concept template_string_list_c =
     is_template_string_list<std::remove_cvref_t<T>>;
 
-}  // namespace dooc
+} // namespace dooc
 
 #endif

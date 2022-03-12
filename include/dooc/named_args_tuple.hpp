@@ -139,7 +139,8 @@ template <template_string... tTags, arg_with_any_name... Ts>
 constexpr auto covers_args_impl(Ts &&...) noexcept {
   using t_help = std::tuple<Ts &&...>;
   if constexpr ((decltype(covers_args_impl<tTags>(
-                    std::declval<t_help>()))::value &&...))
+                     std::declval<t_help>()))::value &&
+                 ...))
     return std::true_type{};
   else
     return std::false_type{};
@@ -288,14 +289,16 @@ private:
       else
         return std::false_type();
     };
-    constexpr auto fullfills_any_f = []<typename T2>(T2 const&) {
-        if constexpr (details::is_any_equivalent_with<T2, Ts...>)
-            return std::true_type{};
-        else
-            return std::false_type{};
+    constexpr auto fullfills_any_f = []<typename T2>(T2 const &) {
+      if constexpr (details::is_any_equivalent_with<T2, Ts...>)
+        return std::true_type{};
+      else
+        return std::false_type{};
     };
-    if constexpr ((decltype(is_fullfilled_f(std::declval<Ts>()))::value &&...) &&
-        (decltype(fullfills_any_f(std::declval<Ts2>()))::value && ...))
+    if constexpr ((decltype(is_fullfilled_f(std::declval<Ts>()))::value &&
+                   ...) &&
+                  (decltype(fullfills_any_f(std::declval<Ts2>()))::value &&
+                   ...))
       return true;
     else
       return false;
