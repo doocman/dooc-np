@@ -13,6 +13,18 @@ Currently been tested with MSVC 2019.11.10.
 The more 'elegant' usage of the named arguments in the library would be to define your function like:
 
 ```c++
+// concept 'arg_with_any_name' means that TArgs all should be a named_arg_t or similar.
+template<arg_with_any_name... TArgs>
+  requires args_fullfill<arg_list<named_type<int, "min">, named_type<int, "max">>, Ts...>
+void foo(Ts const&... args) {
+    // Retrieve the variables.
+    do_something(get<"min">(args...));
+    do_something_else(get<"max">(args...));
+}
+```
+
+or (initial way)
+```c++
 
 // concept 'arg_with_any_name' means that TArgs all should be a named_arg_t or similar.
 template<arg_with_any_name... TArgs>
@@ -123,3 +135,4 @@ void bar(named_tuple<named_arg_t<"string", std::string>, named_arg_t<"int", int>
 - Add concept that makes explicit typed functions with named arguments same API-wise as the implicit typed.
 - Test and make it work for GCC and Clang.
 - Make a first release.
+- Do arguments with in/out/inout/fwd/move
