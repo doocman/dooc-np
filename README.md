@@ -1,6 +1,4 @@
-# Dooc-NP
-
-Dooc Named Parameters.
+# Dooc's Named Parameters
 
 A header-only library containing string-indexed tuples (`named_tuple`).
 With some help of C++20 concepts and user defined non-type template parameters we also have a decent named
@@ -10,15 +8,38 @@ Tested with MSVC 2019.11.10 and GCC 10.3 (on Ubuntu).
 Does not work with Clang compiler for now (seems to miss the deduction in user defined non-type template arguments
 needed for the `template_string` to work.)
 
+## Install
+The library is header-only. The easiest way to use it is to download it and integrate it into a CMake project by
+doing `add_subdirectory(path/to/lib [internal/build/path OPTIONAL])` and then use `target_link_libraries(<your target>
+<PUBLIC/PRIVATE> dooc::named_parameters)`
+
+### Requirements
+- C++ 20
+- MSVC 2019-11.10 (or newer) or GCC-10.3 (or newer). Clang currently does not work.
+
 ## Named argument
 
-The more 'elegant' usage of the named arguments in the library would be to define your function like:
+Named arguments are a feature in many programming languages that can improve readability and ease of use for APIs
+that may have a lot of options. Python for example aalow the following syntax:
+```python
+def foo(arg1, arg2):
+   ...
+
+foo(arg2=5, arg1='hello!`)
+```
+
+This library intends to give C++ a similar capability without runtime overhead.
+
+It is based around c++20:s concept. We can define a function that can use the named arguments like this:
 
 ```c++
 // concept 'arg_with_any_name' means that TArgs all should be a named_arg_t or similar.
 template<arg_with_any_name... TArgs>
-  requires args_fullfill<arg_list<named_type<int, "min">, named_type<int, "max">>, Ts...>
-void foo(Ts const&... args) {
+  // args_fullfill evaluates that TArgs... have a variable named "min" that can implicitly convert to int
+  //  and a variable called "max" under the same constraint.
+  // arg_list is needed to differentiate between the required args and the supplied ones.
+  requires args_fullfill<arg_list<named_type<int, "min">, named_type<int, "max">>, TArgs...>
+void foo(TArgs const&... args) {
     // Retrieve the variables.
     do_something(get<"min">(args...));
     do_something_else(get<"max">(args...));
@@ -31,9 +52,9 @@ or (initial way)
 // concept 'arg_with_any_name' means that TArgs all should be a named_arg_t or similar.
 template<arg_with_any_name... TArgs>
 // 'are_exactly_args' is a constexpr bool that is only true when the names in the template_string_list_t
-//  and Ts have a one-on-one (unordered) mapping.
-  requires are_exactly_args<template_string_list_t<"min", "max">, Ts...>
-void foo(Ts const&... args) {
+//  and TArgs have a one-on-one (unordered) mapping.
+  requires are_exactly_args<template_string_list_t<"min", "max">, TArgs...>
+void foo(TArgs const&... args) {
     // Retrieve the variables.
     do_something(get<"min">(args...));
     do_something_else(get<"max">(args...));
@@ -52,6 +73,8 @@ using namespace dooc::tuple_literals;
 foo("max"_na = 5., "min"_na = 0.1);
 ```
 
+Note that the order of parameters are unimportant.
+
 If you need to explicitly state the type that goes into the function, you can declare it like:
 ```c++
 void bar(named_tuple<named_arg_t<"min", double>, named_arg_t<"max", double>> const& args)
@@ -68,9 +91,6 @@ This leads to the user code needing to wrap their arguments in `{}`-brackets:
 using namespace dooc::tuple_literals;
 bar({"min"_na = 1., "max"_na = 36.});
 ```
-
-A concept for this should be made (as to streamline the calling convention), but it is still a work in
-progress.
 
 ## tuple slice view and transform:
 
@@ -132,9 +152,15 @@ void bar(named_tuple<named_arg_t<"string", std::string>, named_arg_t<"int", int>
 }
 ```
 
+## Contribution:
+I happily accept contributions and feature requests. If you add a pull request however it is strongly encouraged that
+a test that shows the functional change is included in the pr (and it should fail without the rest of the changes).
+Exceptions are fixes for a specific compiler and pure refactoring/documentation.
+
 
 ## Future plans:
-- Add concept that makes explicit typed functions with named arguments same API-wise as the implicit typed.
-- Test and make it work for GCC and Clang.
+- Make it work for Clang.
 - Make a first release.
 - Do arguments with in/out/inout/fwd/move
+- Set up CI testing for supported compilers.
+
