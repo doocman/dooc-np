@@ -14,24 +14,21 @@ using namespace ::testing;
 using namespace tuple_literals;
 using namespace std::string_view_literals;
 
-template<typename...>
-constexpr bool function_compiles = false;
-template<typename TFunc, typename... Ts>
-requires requires(TFunc f, Ts... ts) {
-    f(ts...);
-}
+template <typename...> constexpr bool function_compiles = false;
+template <typename TFunc, typename... Ts>
+  requires requires(TFunc f, Ts... ts) { f(ts...); }
 constexpr bool function_compiles<TFunc, Ts...> = true;
 
-template<typename... Ts>
-constexpr bool function_compiles_f(Ts&&...) noexcept {
+template <typename... Ts>
+constexpr bool function_compiles_f(Ts &&...) noexcept {
   return function_compiles<Ts...>;
 }
 
-static_assert(function_compiles_f([] () {}));
-static_assert(function_compiles_f([] (int) {}, 1));
-static_assert(!function_compiles_f([] (int) {}, "not an int"));
+static_assert(function_compiles_f([]() {}));
+static_assert(function_compiles_f([](int) {}, 1));
+static_assert(!function_compiles_f([](int) {}, "not an int"));
 
-TEST(NamedTuple, Creation)  // NOLINT
+TEST(NamedTuple, Creation) // NOLINT
 {
   auto a2 = "hi there!"sv;
   auto t1 = make_named_args(named_arg<"arg1">(2), named_arg<"arg_2">(a2));
@@ -41,7 +38,7 @@ TEST(NamedTuple, Creation)  // NOLINT
   EXPECT_THAT(v1, Eq(2));
 }
 
-TEST(NamedTuple, CreationUsingLiterals)  // NOLINT
+TEST(NamedTuple, CreationUsingLiterals) // NOLINT
 {
   auto t1 = make_named_args("arg1"_na(2), "arg_2"_na("hi there!"sv));
   int &v1 = get<"arg1">(t1);
@@ -50,12 +47,12 @@ TEST(NamedTuple, CreationUsingLiterals)  // NOLINT
   EXPECT_THAT(v1, Eq(2));
 }
 
-TEST(NamedTuple, GetOnRValue)  // NOLINT
+TEST(NamedTuple, GetOnRValue) // NOLINT
 {
   EXPECT_THAT(get<"arg1">(named_tuple("arg1"_na(2))), Eq(2));
 }
 
-TEST(NamedTuple, TupleCat)  // NOLINT
+TEST(NamedTuple, TupleCat) // NOLINT
 {
   auto t1 = make_named_args("arg1"_na(2), "arg_2"_na("hi there!"sv));
   named_tuple t2 = {"arg3"_na(2.3), "super duper"_na(55)};
@@ -66,14 +63,14 @@ TEST(NamedTuple, TupleCat)  // NOLINT
   EXPECT_THAT(get<"just another arg">(t4), Eq(33.));
 }
 
-TEST(NamedTuple, ElementExists)  // NOLINT
+TEST(NamedTuple, ElementExists) // NOLINT
 {
   named_tuple t1 = ("arg1"_na(2));
   static_assert(contains_arg<"arg1">(t1));
   static_assert(!contains_arg<"arg2">(t1));
 }
 
-TEST(NamedTuple, GetSlice)  // NOLINT
+TEST(NamedTuple, GetSlice) // NOLINT
 {
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
   auto t2 = get_slice_view<"a1", "a2">(t1);
@@ -91,7 +88,7 @@ constexpr bool test_that_function_is_allowed = false;
 template <typename TTuple, details::func_works_with_tuple_c<TTuple> TFunc>
 constexpr bool test_that_function_is_allowed<TTuple, TFunc> = true;
 
-TEST(NamedTuple, ChainSpliceTransform)  // NOLINT
+TEST(NamedTuple, ChainSpliceTransform) // NOLINT
 {
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
   auto t2 = transform([](auto const &a, auto const &) { return a * 3; },
@@ -125,7 +122,7 @@ TEST(NamedTuple, ChainSpliceTransform)  // NOLINT
 
 constexpr void foo(int &) {}
 
-TEST(NamedTuple, DifferentOrderCopyAssign)  // NOLINT
+TEST(NamedTuple, DifferentOrderCopyAssign) // NOLINT
 {
   using tuple_1_t =
       named_tuple<named_arg_t<"a1", int>, named_arg_t<"a2", double>,
@@ -153,7 +150,7 @@ TEST(NamedTuple, DifferentOrderCopyAssign)  // NOLINT
   EXPECT_THAT(get<"a1">(t3), Eq(3));
 }
 
-TEST(NamedTuple, Apply)  // NOLINT
+TEST(NamedTuple, Apply) // NOLINT
 {
   constexpr template_string_list_t<"a3", "a1", "a2"> arg_ord{};
   MockFunction<void(int, int, double)> f1;
@@ -167,7 +164,7 @@ TEST(NamedTuple, Apply)  // NOLINT
   apply([&f2](auto const &...args) { f2.Call(args...); }, t1, arg_ord);
 }
 
-TEST(NamedTuple, SliceApply)  // NOLINT
+TEST(NamedTuple, SliceApply) // NOLINT
 {
   MockFunction<void(int, int)> f1;
   EXPECT_CALL(f1, Call(1, 2));
@@ -176,7 +173,7 @@ TEST(NamedTuple, SliceApply)  // NOLINT
   apply([&f1](auto const &...args) { f1.Call(args...); }, t2);
 }
 
-TEST(NamedTuple, TransformNamed)  // NOLINT
+TEST(NamedTuple, TransformNamed) // NOLINT
 {
   named_tuple t1("a1"_na = 1, "a2"_na = 1., "a3"_na = 3);
   auto t1t = transform(
@@ -192,7 +189,7 @@ TEST(NamedTuple, TransformNamed)  // NOLINT
   EXPECT_THAT(get<"a1">(t2t), StrEq("asdasa1"));
 }
 
-TEST(NamedArg, GetFromBunch)  // NOLINT
+TEST(NamedArg, GetFromBunch) // NOLINT
 {
   named_arg_t arg1 = named_arg<"arg1">(3.);
   named_arg_t arg2 = named_arg<"arg2">(91.);
@@ -203,20 +200,27 @@ TEST(NamedArg, GetFromBunch)  // NOLINT
   EXPECT_THAT("arg1"_from(arg1, arg2), Eq(arg1));
 }
 
-TEST(NamedArg, FullCoverage)  // NOLINT
+TEST(NamedArg, FullCoverage) // NOLINT
 {
   named_arg_t arg1 = named_arg<"arg1">(3.);
   named_arg_t arg2 = named_arg<"arg2">(91.);
 
-  static_assert(covers_args<template_string_list_t<"arg1", "arg2">, decltype(arg1), decltype(arg2)>);
-  static_assert(covers_args<template_string_list_t<"arg2", "arg1">, decltype(arg1), decltype(arg2)>);
-  static_assert(are_exactly_args<template_string_list_t<"arg1", "arg2">, decltype(arg1), decltype(arg2)>);
-  static_assert(are_exactly_args<template_string_list_t<"arg2", "arg1">, decltype(arg1), decltype(arg2)>);
-  static_assert(covers_args<template_string_list_t<"arg2">, decltype(arg1), decltype(arg2)>);
-  static_assert(!are_exactly_args<template_string_list_t<"arg2">, decltype(arg1), decltype(arg2)>);
-  static_assert(!covers_args<template_string_list_t<"arg2", "arg3">, decltype(arg1), decltype(arg2)>);
-  static_assert(!covers_args<template_string_list_t<"arg1", "arg2", "arg3">, decltype(arg1), decltype(arg2)>);
-
+  static_assert(covers_args<template_string_list_t<"arg1", "arg2">,
+                            decltype(arg1), decltype(arg2)>);
+  static_assert(covers_args<template_string_list_t<"arg2", "arg1">,
+                            decltype(arg1), decltype(arg2)>);
+  static_assert(are_exactly_args<template_string_list_t<"arg1", "arg2">,
+                                 decltype(arg1), decltype(arg2)>);
+  static_assert(are_exactly_args<template_string_list_t<"arg2", "arg1">,
+                                 decltype(arg1), decltype(arg2)>);
+  static_assert(covers_args<template_string_list_t<"arg2">, decltype(arg1),
+                            decltype(arg2)>);
+  static_assert(!are_exactly_args<template_string_list_t<"arg2">,
+                                  decltype(arg1), decltype(arg2)>);
+  static_assert(!covers_args<template_string_list_t<"arg2", "arg3">,
+                             decltype(arg1), decltype(arg2)>);
+  static_assert(!covers_args<template_string_list_t<"arg1", "arg2", "arg3">,
+                             decltype(arg1), decltype(arg2)>);
 }
 
 TEST(NamedArg, TypedFullCoverage) // NOLINT
@@ -231,14 +235,16 @@ TEST(NamedArg, TypedFullCoverage) // NOLINT
                                  named_arg_t<"arg2", std::string_view>>);
   EXPECT_TRUE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!"sv));
   EXPECT_TRUE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!"));
-  EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!", "arg3"_na = 2));
+  EXPECT_FALSE(
+      function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!", "arg3"_na = 2));
   EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = 444));
   EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1));
 
-  // This last one may be very hard to assert. Just doing a check on the number of arguments
-  // would fix this particular error, but that would not work if we start to mix in optional
-  // arguments as well...
-  // EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!", "arg1"_na = 2));
+  // This last one may be very hard to assert. Just doing a check on the number
+  // of arguments would fix this particular error, but that would not work if we
+  // start to mix in optional arguments as well...
+  // EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!",
+  // "arg1"_na = 2));
 }
 
-}  // namespace dooc
+} // namespace dooc
