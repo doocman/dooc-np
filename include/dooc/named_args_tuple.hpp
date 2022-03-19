@@ -396,6 +396,10 @@ constexpr bool is_named_arg<named_arg_t<tName, T>> = true;
 
 template <template_string tTag, template_string... tTags, typename... Ts>
 struct named_tuple_element<tTag, named_tuple<named_arg_t<tTags, Ts>...>> {
+private:
+  static constexpr auto index_ = details::index_of_template_string<tTag, tTags...>();
+  static_assert(index_ < sizeof...(Ts), "Tag not in tuple");
+public:
   using type =
       std::tuple_element_t<details::index_of_template_string<tTag, tTags...>(),
                            std::tuple<Ts...>>;
