@@ -205,16 +205,13 @@ template <template_string tTag, typename T> struct named_arg_t {
     return value_;
   }
 
-  constexpr T &value() &noexcept requires(!std::is_reference_v<T>) {
+  constexpr std::add_lvalue_reference_t<T> value() &noexcept {
     return value_;
   }
-  constexpr T &&value() &&noexcept requires(!std::is_reference_v<T>) {
+  constexpr std::conditional_t<std::is_reference_v<T>, T, T &&>value() &&noexcept {
     return std::move(value_);
   }
-  constexpr T const &value() const &noexcept requires(!std::is_reference_v<T>) {
-    return value_;
-  }
-  constexpr T value() const noexcept requires(std::is_reference_v<T>) {
+  constexpr std::conditional_t<std::is_reference_v<T>, T, T const &> value() const &noexcept {
     return value_;
   }
 
