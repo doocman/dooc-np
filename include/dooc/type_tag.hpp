@@ -38,7 +38,7 @@ constexpr std::size_t size(template_string<tN> const &) noexcept {
   return tN;
 }
 
-//template <template_string> struct template_tag {};
+// template <template_string> struct template_tag {};
 
 template <typename T, std::size_t tN>
   requires std::is_convertible_v<T, std::string_view>
