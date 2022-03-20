@@ -42,7 +42,9 @@ TEST(NamedTuple, CreationUsingLiterals) // NOLINT
 {
   auto t1 = make_named_args("arg1"_na(2), "arg_2"_na("hi there!"sv));
   int &v1 = get<"arg1">(t1);
-  std::string_view &v2 = "arg_2"_from(t1);
+  auto a2_pre = "arg_2"_from;
+  std::string_view& v2 = a2_pre(t1);
+  // std::string_view &v2 = "arg_2"_from(t1); // This crashes clang-12 compiler frontend for some reason...
   EXPECT_THAT(v2, StrEq("hi there!"sv));
   EXPECT_THAT(v1, Eq(2));
 }
@@ -83,10 +85,10 @@ TEST(NamedTuple, GetSlice) // NOLINT
 }
 
 template <typename, typename>
-constexpr bool test_that_function_is_allowed = false;
+constexpr bool function_is_valid_tuple_transform = false;
 
 template <typename TTuple, details::func_works_with_tuple_c<TTuple> TFunc>
-constexpr bool test_that_function_is_allowed<TTuple, TFunc> = true;
+constexpr bool function_is_valid_tuple_transform<TTuple, TFunc> = true;
 
 TEST(NamedTuple, ChainSpliceTransform) // NOLINT
 {
@@ -98,13 +100,13 @@ TEST(NamedTuple, ChainSpliceTransform) // NOLINT
   constexpr auto f2 = [](auto const &, auto &&) {};
   constexpr auto f3 = [](auto const &, auto &&) { return 1; };
   static_assert(
-      !test_that_function_is_allowed<std::remove_cvref_t<decltype(t1)>,
+      !function_is_valid_tuple_transform<std::remove_cvref_t<decltype(t1)>,
                                      std::remove_cvref_t<decltype(f)>>);
   static_assert(
-      !test_that_function_is_allowed<std::remove_cvref_t<decltype(t1)>,
+      !function_is_valid_tuple_transform<std::remove_cvref_t<decltype(t1)>,
                                      std::remove_cvref_t<decltype(f2)>>);
   static_assert(
-      test_that_function_is_allowed<std::remove_cvref_t<decltype(t1)>,
+      function_is_valid_tuple_transform<std::remove_cvref_t<decltype(t1)>,
                                     std::remove_cvref_t<decltype(f3)>>);
   static_assert(contains_arg<"a1">(t2));
   static_assert(contains_arg<"a2">(t2));
@@ -119,6 +121,7 @@ TEST(NamedTuple, ChainSpliceTransform) // NOLINT
   EXPECT_THAT(get<"a1">(t3), Eq(1 * 4));
   EXPECT_THAT(get<"a2">(t3), Eq(2 * 4));
 }
+
 
 constexpr void foo(int &) {}
 
@@ -223,12 +226,17 @@ TEST(NamedArg, FullCoverage) // NOLINT
                              decltype(arg1), decltype(arg2)>);
 }
 
+struct typed_full_coverage_impl {
+  template<arg_with_any_name... Ts>
+  requires (args_fullfill<
+        arg_list<named_type<int, "arg1">, named_type<std::string_view, "arg2">>,
+        Ts...>)
+        void operator()(Ts const&... ) {};
+};
+
 TEST(NamedArg, TypedFullCoverage) // NOLINT
 {
-  constexpr auto f = []<arg_with_any_name... Ts>
-    requires args_fullfill<
-        arg_list<named_type<int, "arg1">, named_type<std::string_view, "arg2">>,
-        Ts...>(Ts const &...) {};
+  constexpr typed_full_coverage_impl f;
   static_assert(
       arg_list<named_type<int, "arg1">, named_type<std::string_view, "arg2">>::
           template fullfilled_by<named_arg_t<"arg1", int>,

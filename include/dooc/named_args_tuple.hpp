@@ -364,7 +364,7 @@ public:
              details::is_tuple_convertible_v<std::remove_cvref_t<TTuple>,
                                              named_tuple>)
   named_tuple &operator=(TTuple const &t) {
-    ((get<tTags>(*this) = get<tTags>(t), 0) + ...);
+    (void) ((get<tTags>(*this) = get<tTags>(t), 0) + ...);
     return *this;
   }
 
@@ -481,7 +481,7 @@ public:
 };
 template <template_string tTag, typename TTuple, template_string... tTags>
 struct named_tuple_element<tTag, named_tuple_slice_view<TTuple, tTags...>>
-    : named_tuple_element<tTag, TTuple> {};
+    : named_tuple_element<tTag, std::remove_reference_t<TTuple>> {};
 
 template <template_string... tTags, typename TTuple>
 constexpr named_tuple_slice_view<TTuple, tTags...> get_slice_view(TTuple &&t) {
@@ -526,10 +526,21 @@ struct tuple_transform_constexpr_members<TTuple> {
   static constexpr template_string_list_t arg_list_ = TTuple::arg_list_;
 };
 
+template<typename T>
+concept non_void = !std::is_same_v<T, void>;
+
+
 template <typename TFunc, typename TTuple, template_string... tNames>
-  requires requires(TFunc f, TTuple &&t) {
-    std::tuple(f(get<tNames>(std::forward<TTuple>(t)), tNames)...);
+requires ((requires (TFunc f, named_tuple_element_t<tNames, std::remove_reference_t<TTuple>> e)
+  {
+    {
+      f(std::forward<named_tuple_element_t<tNames, std::remove_reference_t<TTuple>>>(e), tNames)
+    } -> non_void;
   }
+) && ... )
+  /*requires requires(TFunc f, TTuple &&t) {
+    std::tuple(f(get<tNames>(std::forward<TTuple>(t)), tNames)...);
+  }*/
 constexpr void call_for_each(TFunc &&, TTuple &&,
                              template_string_list_t<tNames...>) {}
 
@@ -646,6 +657,23 @@ constexpr auto named_tuple_cat(T1 &&t1, T2 &&t2, Ts &&...ts) {
       std::forward<Ts>(ts)...);
 }
 
+
+template <template_string tTag, typename TTuple, typename TFunc>
+struct named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc>> {
+  using type =
+      decltype(std::declval<TFunc>()(std::declval<named_tuple_element_t<tTag, std::remove_reference_t<TTuple>>>()));
+};
+template <template_string tTag, typename TTuple, typename TFunc>
+struct named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc> const>
+  : named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc>> {};
+template <template_string tTag, typename TTuple, typename TFunc>
+struct named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc> volatile>
+  : named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc>> {};
+template <template_string tTag, typename TTuple, typename TFunc>
+struct named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc> const volatile>
+  : named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc>> {};
+
+
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr bool
 contains_arg(named_tuple<named_arg_t<tTags, Ts>...> const &) noexcept {
@@ -683,8 +711,11 @@ apply(auto &&callable, TNamedTuple &&t,
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t), arg_list);
 }
 
-template <named_tuple_like TTuple,
-          details::func_works_with_tuple_c<TTuple> TFunc>
+template <//named_tuple_like TTuple,
+          typename TTuple,
+          //details::func_works_with_tuple_c<TTuple> TFunc
+          typename TFunc
+          >
 constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
                                                               TTuple &&t) {
   return {std::move(f), std::forward<TTuple>(t)};
