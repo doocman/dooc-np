@@ -6,6 +6,10 @@ enable_testing()
 
 include(GoogleTest)
 
+if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang")
+        add_compile_options(-ftemplate-backtrace-limit=0)
+endif ()
+
 add_executable(${CURRENT_TARGET_NAME}
         named_args_tuple.ut.cpp
         )

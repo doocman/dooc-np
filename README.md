@@ -4,9 +4,7 @@ A header-only library containing string-indexed tuples (`named_tuple`).
 With some help of C++20 concepts and user defined non-type template parameters we also have a decent named
 argument API framework.
 
-Tested with MSVC 2019.11.10 and GCC 10.3 (on Ubuntu).
-Does not work with Clang compiler for now (seems to miss the deduction in user defined non-type template arguments
-needed for the `template_string` to work.)
+Tested with MSVC 2019.11.10 on Windows and GCC 10.3 and Clang-12.0.0 (on Ubuntu).
 
 ## Install
 The library is header-only. The easiest way to use it is to download it and integrate it into a CMake project by
@@ -15,7 +13,7 @@ doing `add_subdirectory(path/to/lib [internal/build/path OPTIONAL])` and then us
 
 ### Requirements
 - C++ 20
-- MSVC 2019-11.10 (or newer) or GCC-10.3 (or newer). Clang currently does not work.
+- MSVC 2019-11.10 (or newer), GCC-10.3 (or newer) or Clang-12.0.0 (or newer).
 
 ## Named argument
 
@@ -159,7 +157,6 @@ Exceptions are fixes for a specific compiler and pure refactoring/documentation.
 
 
 ## Future plans:
-- Make it work for Clang.
 - Make a first release.
 - Do arguments with in/out/inout/fwd/move
 - Set up CI testing for supported compilers.
