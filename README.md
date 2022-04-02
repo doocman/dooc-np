@@ -73,6 +73,31 @@ foo("max"_na = 5., "min"_na = 0.1);
 
 Note that the order of parameters are unimportant.
 
+`args_fullfill` always need the initial `arg_list` to differentiate between the args expected and
+args provided.
+Each entry inside the `arg_list` however can currently be of these 4 types:
+1. `named_type<"[name]", [type]>` : argument must have a type convertible to `[type]`. Argument is mandatory.
+1. `named_auto<"[name]">` : Any type is allowed. Argument is mandatory.
+1. `optional_typed_arg<"[name]", [type]>` : argument must have a type convertible to `[type]`. Argument is optional.
+1. `optional_auto_arg<"[name]">` : Any type is allowed. Argument is optional.
+
+Optional arguments can be checked for using the `constexpr template bool` `arg_provided<"[name]", [Ts...]>`, or you can use
+`get_or<"[name]">([default], args...)`. Example:
+```c++
+template<arg_with_any_name... TArgs>
+requires args_fullfill<
+            arg_list<optional_typed_arg<"arg1", int>, optional_auto_arg<"arg2">>,
+            TArgs...>
+void foo(TArgs&&... args) {
+    // Will be '5' if 'arg1' is missing.
+    int myVal = get_or<"arg1">(5, args...);
+    // 'constexpr' because we do not want to compile what is inside if 'arg2' is missing.
+    if constexpr(arg_provided<"arg2", TArgs...>) {
+        do_something(get<"arg2">(std::forward<TArgs>(args)...));
+    }
+}
+```
+
 If you need to explicitly state the type that goes into the function, you can declare it like:
 ```c++
 void bar(named_tuple<named_arg_t<"min", double>, named_arg_t<"max", double>> const& args)

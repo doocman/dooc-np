@@ -231,7 +231,7 @@ struct typed_full_coverage_impl {
     requires(args_fullfill<arg_list<named_type<int, "arg1">,
                                     named_type<std::string_view, "arg2">>,
                            Ts...>)
-  void operator()(Ts const &...){};
+  void operator()(Ts const &...) const {}
 };
 
 TEST(NamedArg, TypedFullCoverage) // NOLINT
@@ -253,6 +253,37 @@ TEST(NamedArg, TypedFullCoverage) // NOLINT
   // start to mix in optional arguments as well...
   // EXPECT_FALSE(function_compiles_f(f, "arg1"_na = 1, "arg2"_na = "hi!",
   // "arg1"_na = 2));
+}
+
+struct optional_arg_impl {
+  template <arg_with_any_name... Ts>
+    requires(args_fullfill<arg_list<optional_typed_arg<int, "arg1">,
+                                    optional_auto_arg<"arg2">>,
+                           Ts...>)
+  std::pair<bool, bool> operator()(Ts const &...) const {
+    return {arg_provided<"arg1", Ts...>, arg_provided<"arg2", Ts...>};
+    }
+};
+
+TEST(NamedArg, OptionalArgs) // NOLINT
+{
+  constexpr optional_arg_impl f;
+  EXPECT_TRUE(function_compiles_f(f, "arg1"_na = 1));
+  EXPECT_TRUE(function_compiles_f(f));
+  EXPECT_THAT(get_or<"not here">(5, "arg1"_na = 1, "arg2"_na = "sads"), Eq(5));
+  EXPECT_THAT(get_or<"arg1">(5, "arg1"_na = 1, "arg2"_na = "sads"), Eq(1));
+  auto res = f("arg1"_na = 1);
+  EXPECT_TRUE(res.first);
+  EXPECT_FALSE(res.second);
+}
+
+TEST(NamedArg, ConstructContainer) // NOLINT
+{
+  std::vector<int> v1(construct(get_or<"arg1">(1, "arg1"_na = {1, 2, 3, 4})));
+  EXPECT_THAT(v1, ElementsAre(1, 2, 3, 4));
+  std::vector<int> v2(
+      construct(get_or<"not here">(1, "arg1"_na = {1, 2, 3, 4})));
+  EXPECT_THAT(v2, ElementsAre(0));
 }
 
 } // namespace dooc

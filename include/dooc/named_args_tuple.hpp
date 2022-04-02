@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <concepts>
+#include <span>
 #include <type_traits>
 
 #include <dooc/type_tag.hpp>
@@ -20,6 +21,14 @@ constexpr template_string_list_t contained_tags = T::arg_list_;
 template <template_string, typename T> struct named_arg_t;
 template <typename...> struct named_tuple;
 template <typename> struct named_arg_properties;
+template <typename T>
+  requires(!std::is_same_v<T, std::remove_reference_t<T>>)
+struct named_arg_properties<T> {
+  static constexpr auto tag =
+      named_arg_properties<std::remove_reference_t<T>>::tag;
+  using type = typename named_arg_properties<std::remove_reference_t<T>>::type;
+};
+
 template <typename T> struct named_arg_properties<T const> {
   using type = std::add_const_t<typename named_arg_properties<T>::type>;
   static constexpr template_string tag = named_arg_properties<T>::tag;
@@ -207,7 +216,7 @@ template <template_string tTag, typename T> struct named_arg_t {
   constexpr std::add_lvalue_reference_t<T> value() &noexcept { return value_; }
   constexpr std::conditional_t<std::is_reference_v<T>, T, T &&>
   value() &&noexcept {
-    return std::move(value_);
+    return std::forward<T>(value_);
   }
   constexpr std::conditional_t<std::is_reference_v<T>, T, T const &>
   value() const &noexcept {
@@ -230,43 +239,56 @@ constexpr decltype(auto) get(T &&t) {
 
 template <typename T, template_string tTag> struct named_type {
   template <typename T2>
-  /*requires requires(T2) {
-    typename named_arg_properties<std::remove_cvref_t<T2>>::type;
-    //{
-    //  named_arg_properties<T2>::tag
-    //  } -> std::equality_comparable_with<decltype(tTag)>;
-  }*/
+    requires requires(T2) {
+      typename named_arg_properties<std::remove_cvref_t<T2>>::type;
+      { named_arg_properties<T2>::tag } -> std::equality_comparable;
+    }
   static constexpr bool is_equivalent =
-      named_arg_properties<T2>::tag ==
-      tTag &&std::is_convertible_v<typename named_arg_properties<T2>::type, T>;
+      named_arg_properties<T2>::tag == tTag &&
+      std::is_convertible_v<typename named_arg_properties<T2>::type, T>;
+  static constexpr bool optional = false;
 };
 template <template_string tTag> struct named_auto {
   template <typename T2>
     requires requires(T2) {
       typename named_arg_properties<T2>::type;
-      {
-        named_arg_properties<T2>::tag
-        } -> std::equality_comparable_with<decltype(tTag)>;
+      { named_arg_properties<T2>::tag } -> std::equality_comparable;
     }
   static constexpr bool is_equivalent = named_arg_properties<T2>::tag == tTag;
+  static constexpr bool optional = false;
+};
+template <typename T, template_string tTag> struct optional_typed_arg {
+  template <typename T2>
+  static constexpr bool is_equivalent =
+      named_type<T, tTag>::template is_equivalent<T2>;
+  static constexpr bool optional = true;
+};
+template <template_string tTag> struct optional_auto_arg {
+  template <typename T2>
+  static constexpr bool is_equivalent =
+      named_auto<tTag>::template is_equivalent<T2>;
+  static constexpr bool optional = true;
 };
 
 namespace details {
-template <typename T, typename... Ts>
-  requires(requires(T) {
+template <typename TReq, typename... TArgs>
+  requires(requires(TReq) {
     {
-      T::template is_equivalent<named_arg_t<"na", int>>
+      TReq::template is_equivalent<named_arg_t<"na", int>>
       } -> std::convertible_to<bool>;
+    { TReq::optional } -> std::convertible_to<bool>;
   })
-constexpr bool is_equivalent_with_any = (T::template is_equivalent<Ts> || ...);
+constexpr bool is_equivalent_with_any =
+    TReq::optional || (TReq::template is_equivalent<TArgs> || ...);
 
-template <typename T, typename... Ts>
-  requires(requires(Ts) {
+template <typename TArg, typename... TReqs>
+  requires(requires(TReqs) {
     {
-      Ts::template is_equivalent<named_arg_t<"na", int>>
+      TReqs::template is_equivalent<named_arg_t<"na", int>>
       } -> std::convertible_to<bool>;
   } && ...)
-constexpr bool is_any_equivalent_with = (Ts::template is_equivalent<T> || ...);
+constexpr bool is_any_equivalent_with =
+    (TReqs::template is_equivalent<TArg> || ...);
 
 } // namespace details
 
@@ -312,11 +334,25 @@ template <template_string tTag, arg_with_any_name T, arg_with_any_name T2,
            (is_tagged_with<Ts, tTag> || ...))
 constexpr decltype(auto) get(T &&t, T2 &&t2, Ts &&...ts) {
   if constexpr (is_tagged_with<T, tTag>) {
-    (void)t2;
+    unused(t2);
     return get<tTag>(std::forward<T>(t));
   } else {
-    (void)t;
+    unused(t);
     return get<tTag>(std::forward<T2>(t2), std::forward<Ts>(ts)...);
+  }
+}
+
+template<template_string tTag, arg_with_any_name... Ts>
+constexpr bool arg_provided = ((is_tagged_with<Ts, tTag> || ...));
+
+template <template_string tTag, typename T, arg_with_any_name... Ts>
+constexpr decltype(auto) get_or(T &&default_return, Ts &&...args) {
+  if constexpr ((is_tagged_with<Ts, tTag> || ...)) {
+    unused(default_return);
+    return get<tTag>(std::forward<Ts>(args)...);
+  } else {
+    unused(args...);
+    return std::forward<T>(default_return);
   }
 }
 
@@ -362,7 +398,7 @@ public:
              details::is_tuple_convertible_v<std::remove_cvref_t<TTuple>,
                                              named_tuple>)
   named_tuple &operator=(TTuple const &t) {
-    (void)((get<tTags>(*this) = get<tTags>(t), 0) + ...);
+    unused(((get<tTags>(*this) = get<tTags>(t), 0) + ...));
     return *this;
   }
 
@@ -601,12 +637,49 @@ constexpr auto get_slice_view(TTuple const &t) {
 }
 
 namespace details {
+template <typename T> class named_initializer_list_t {
+  using span_t = std::span<T const>;
+  span_t data_;
+
+public:
+  using iterator = T const *;
+  using const_iterator = T const *;
+  using size_type = span_t::size_type;
+  using value_type = T;
+  using reference = T const &;
+  using const_reference = T const &;
+  constexpr explicit(false)
+      named_initializer_list_t(std::initializer_list<T> list)
+      : data_(list.begin(), list.end()) {}
+
+  constexpr iterator begin() const noexcept { return data_.data(); }
+  constexpr iterator end() const noexcept {
+    return data_.data() + ssize(data_);
+  }
+  constexpr size_type size() const noexcept { return data_.size(); }
+
+  template <std::constructible_from<iterator, iterator> T>
+  constexpr operator T() const {
+    return T(begin(), end());
+  }
+};
+
 template <template_string tName> struct to_named_arg_t {
   template <typename T> constexpr auto operator()(T &&v) const noexcept {
     return named_arg<tName>(std::forward<T>(v));
   }
   template <typename T> constexpr auto operator=(T &&v) const noexcept {
     return named_arg<tName>(std::forward<T>(v));
+  }
+  template <typename T>
+  constexpr named_arg_t<tName, named_initializer_list_t<T>>
+  operator()(std::initializer_list<T> v) const noexcept {
+    return named_arg<tName>(named_initializer_list_t<T>(v));
+  }
+  template <typename T>
+  constexpr named_arg_t<tName, named_initializer_list_t<T>>
+  operator=(std::initializer_list<T> v) const noexcept {
+    return named_arg<tName>(named_initializer_list_t<T>(v));
   }
 };
 template <template_string tName> struct get_named_arg_t {
@@ -637,7 +710,35 @@ constexpr decltype(auto) apply_impl_(auto &&callable, TTuple &&t,
                                      template_string_list_t<tTags...> const &) {
   callable(get<tTags>(std::forward<TTuple>(t))...);
 }
+template <typename T>
+constexpr std::tuple<T &&> construct_extract(T &&v) noexcept {
+  return std::forward_as_tuple(std::forward<T>(v));
+}
+template <typename T>
+constexpr std::tuple<T const *, T const *>
+construct_extract(named_initializer_list_t<T> v) noexcept {
+  return {v.begin(), v.end()};
+}
 } // namespace details
+
+template <typename... Ts> class construct {
+  using tuple_t = decltype(std::tuple_cat(
+      details::construct_extract(std::declval<Ts &&>())...));
+  tuple_t data_;
+
+public:
+  explicit constexpr construct(Ts &&...args)
+      : data_(std::tuple_cat(
+            details::construct_extract(std::forward<Ts>(args))...)) {}
+
+  template <typename T> explicit constexpr operator T() const {
+    return std::apply(
+        []<typename... Ts2>(Ts2 && ...args) {
+          return T(std::forward<Ts2>(args)...);
+        },
+        data_);
+  }
+};
 
 template <typename T1, typename T2>
 constexpr
