@@ -648,6 +648,7 @@ public:
   using value_type = T;
   using reference = T const &;
   using const_reference = T const &;
+  constexpr named_initializer_list_t() = default;
   constexpr explicit(false)
       named_initializer_list_t(std::initializer_list<T> list)
       : data_(list.begin(), list.end()) {}
