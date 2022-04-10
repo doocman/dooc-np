@@ -701,8 +701,8 @@ struct named_tuple_cat_helper<named_tuple<named_arg_t<tTags1, Ts1>...>,
   template <typename T1, typename T2>
   static constexpr type _cat(T1 &&t1, T2 &&t2) {
     return named_tuple{
-        to_named_arg_t<tTags1>()(get<tTags1>(std::forward<T1>(t1)))...,
-        to_named_arg_t<tTags2>()(get<tTags2>(std::forward<T2>(t2)))...};
+        named_arg_t<tTags1, Ts1>(get<tTags1>(std::forward<T1>(t1)))...,
+        named_arg_t<tTags2, Ts2>(get<tTags2>(std::forward<T2>(t2)))...};
   }
 };
 
