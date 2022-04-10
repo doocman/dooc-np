@@ -644,7 +644,7 @@ template <typename T> class named_initializer_list_t {
 public:
   using iterator = T const *;
   using const_iterator = T const *;
-  using size_type = span_t::size_type;
+  using size_type = typename span_t::size_type;
   using value_type = T;
   using reference = T const &;
   using const_reference = T const &;
@@ -659,9 +659,9 @@ public:
   }
   constexpr size_type size() const noexcept { return data_.size(); }
 
-  template <std::constructible_from<iterator, iterator> T>
-  constexpr operator T() const {
-    return T(begin(), end());
+  template <std::constructible_from<iterator, iterator> T2>
+  constexpr operator T2() const {
+    return T2(begin(), end());
   }
 };
 
