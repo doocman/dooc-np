@@ -342,7 +342,7 @@ constexpr decltype(auto) get(T &&t, T2 &&t2, Ts &&...ts) {
   }
 }
 
-template<template_string tTag, arg_with_any_name... Ts>
+template <template_string tTag, arg_with_any_name... Ts>
 constexpr bool arg_provided = ((is_tagged_with<Ts, tTag> || ...));
 
 template <template_string tTag, typename T, arg_with_any_name... Ts>
@@ -451,20 +451,34 @@ make_named_args(Ts &&...args) {
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &
 get(named_tuple<named_arg_t<tTags, Ts>...> &t) {
-  return t.template _get_impl<tTag>();
+  return static_cast<
+      named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &>(
+      t.template _get_impl<tTag>());
 }
 
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag,
                                 named_tuple<named_arg_t<tTags, Ts>...>> const &
 get(named_tuple<named_arg_t<tTags, Ts>...> const &t) {
-  return get<tTag>(const_cast<std::remove_cvref_t<decltype(t)> &>(t));
+  return static_cast<named_tuple_element_t<
+      tTag, named_tuple<named_arg_t<tTags, Ts>...>> const &>(
+      get<tTag>(const_cast<std::remove_cvref_t<decltype(t)> &>(t)));
 }
 
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &&
 get(named_tuple<named_arg_t<tTags, Ts>...> &&t) {
-  return std::move(get<tTag>(t));
+  return static_cast<
+      named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &&>(
+      get<tTag>(t));
+}
+
+template <template_string tTag, template_string... tTags, typename... Ts>
+constexpr named_tuple_element_t<tTag,
+                                named_tuple<named_arg_t<tTags, Ts>...>> const &&
+get(named_tuple<named_arg_t<tTags, Ts>...> const &&t) {
+  return static_cast<named_tuple_element_t<
+      tTag, named_tuple<named_arg_t<tTags, Ts>...>> const &&>(get<tTag>(t));
 }
 
 template <template_string tTag, typename TTuple>
