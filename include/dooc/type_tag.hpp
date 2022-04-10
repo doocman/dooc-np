@@ -3,14 +3,17 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          https://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef DOOC_WIP_HRP_AND_AP_PUBLIC_INCLUDE_DOOC_TYPE_TAG_HPP
-#define DOOC_WIP_HRP_AND_AP_PUBLIC_INCLUDE_DOOC_TYPE_TAG_HPP
+#ifndef DOOC_NP_DOOC_TYPE_TAG_HPP
+#define DOOC_NP_DOOC_TYPE_TAG_HPP
 
 #include <array>
 #include <iterator>
 #include <string_view>
 
 namespace dooc {
+template <typename... Ts>
+constexpr inline void unused(Ts const &...) noexcept {}
+
 template <std::size_t tN> struct template_string {
   std::array<char, tN - 1> data_;
   using size_type = std::size_t;
