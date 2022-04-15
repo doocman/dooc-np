@@ -201,15 +201,11 @@ template <template_string tTag, typename T> struct named_arg_t {
   constexpr named_arg_t &operator=(named_arg_t const &) = default;
   constexpr named_arg_t &operator=(named_arg_t &&) noexcept = default;
 
-  operator T &() &noexcept requires(!std::is_reference_v<T>) { return value_; }
-  operator T &&() &&noexcept requires(!std::is_reference_v<T>) {
-    return std::move(value_);
+  operator T &() &noexcept { return value_; }
+  operator T &&() &&noexcept {
+    return static_cast<T&&>(value_);
   }
-  operator T const &() const &noexcept requires(!std::is_reference_v<T>) {
-    return value_;
-  }
-
-  operator T() const noexcept requires(std::is_reference_v<T>) {
+  operator T const &() const &noexcept  {
     return value_;
   }
 
@@ -342,7 +338,7 @@ constexpr decltype(auto) get(T &&t, T2 &&t2, Ts &&...ts) {
   }
 }
 
-template<template_string tTag, arg_with_any_name... Ts>
+template <template_string tTag, arg_with_any_name... Ts>
 constexpr bool arg_provided = ((is_tagged_with<Ts, tTag> || ...));
 
 template <template_string tTag, typename T, arg_with_any_name... Ts>
@@ -451,20 +447,34 @@ make_named_args(Ts &&...args) {
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &
 get(named_tuple<named_arg_t<tTags, Ts>...> &t) {
-  return t.template _get_impl<tTag>();
+  return static_cast<
+      named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &>(
+      t.template _get_impl<tTag>());
 }
 
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag,
                                 named_tuple<named_arg_t<tTags, Ts>...>> const &
 get(named_tuple<named_arg_t<tTags, Ts>...> const &t) {
-  return get<tTag>(const_cast<std::remove_cvref_t<decltype(t)> &>(t));
+  return static_cast<named_tuple_element_t<
+      tTag, named_tuple<named_arg_t<tTags, Ts>...>> const &>(
+      get<tTag>(const_cast<std::remove_cvref_t<decltype(t)> &>(t)));
 }
 
 template <template_string tTag, template_string... tTags, typename... Ts>
 constexpr named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &&
 get(named_tuple<named_arg_t<tTags, Ts>...> &&t) {
-  return std::move(get<tTag>(t));
+  return static_cast<
+      named_tuple_element_t<tTag, named_tuple<named_arg_t<tTags, Ts>...>> &&>(
+      get<tTag>(t));
+}
+
+template <template_string tTag, template_string... tTags, typename... Ts>
+constexpr named_tuple_element_t<tTag,
+                                named_tuple<named_arg_t<tTags, Ts>...>> const &&
+get(named_tuple<named_arg_t<tTags, Ts>...> const &&t) {
+  return static_cast<named_tuple_element_t<
+      tTag, named_tuple<named_arg_t<tTags, Ts>...>> const &&>(get<tTag>(t));
 }
 
 template <template_string tTag, typename TTuple>
@@ -701,8 +711,8 @@ struct named_tuple_cat_helper<named_tuple<named_arg_t<tTags1, Ts1>...>,
   template <typename T1, typename T2>
   static constexpr type _cat(T1 &&t1, T2 &&t2) {
     return named_tuple{
-        to_named_arg_t<tTags1>()(get<tTags1>(std::forward<T1>(t1)))...,
-        to_named_arg_t<tTags2>()(get<tTags2>(std::forward<T2>(t2)))...};
+        named_arg_t<tTags1, Ts1>(get<tTags1>(std::forward<T1>(t1)))...,
+        named_arg_t<tTags2, Ts2>(get<tTags2>(std::forward<T2>(t2)))...};
   }
 };
 

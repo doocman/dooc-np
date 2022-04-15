@@ -286,4 +286,15 @@ TEST(NamedArg, ConstructContainer) // NOLINT
   EXPECT_THAT(v2, ElementsAre(0));
 }
 
+TEST(NamedArg, ConcatTupleWithReferences) // NOLINT
+{
+  int v1 = 0;
+  int v2 = 0;
+  auto v1_tuple = named_tuple(named_arg<"a1">(std::ref(v1)));
+  auto v2_tuple = named_tuple(named_arg<"a2">(std::ref(v2)));
+  auto concat_tuple = named_tuple_cat(v1_tuple, v2_tuple);
+  EXPECT_THAT(get<"a1">(concat_tuple), Ref(v1));
+  EXPECT_THAT(get<"a2">(concat_tuple), Ref(v2));
+}
+
 } // namespace dooc
