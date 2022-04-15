@@ -201,15 +201,11 @@ template <template_string tTag, typename T> struct named_arg_t {
   constexpr named_arg_t &operator=(named_arg_t const &) = default;
   constexpr named_arg_t &operator=(named_arg_t &&) noexcept = default;
 
-  operator T &() &noexcept requires(!std::is_reference_v<T>) { return value_; }
-  operator T &&() &&noexcept requires(!std::is_reference_v<T>) {
-    return std::move(value_);
+  operator T &() &noexcept { return value_; }
+  operator T &&() &&noexcept {
+    return static_cast<T&&>(value_);
   }
-  operator T const &() const &noexcept requires(!std::is_reference_v<T>) {
-    return value_;
-  }
-
-  operator T() const noexcept requires(std::is_reference_v<T>) {
+  operator T const &() const &noexcept  {
     return value_;
   }
 
