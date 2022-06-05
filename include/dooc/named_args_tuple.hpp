@@ -148,7 +148,8 @@ template <template_string... tTags, arg_with_any_name... Ts>
 constexpr auto covers_args_impl(Ts &&...) noexcept {
   using t_help = std::tuple<Ts &&...>;
   if constexpr ((decltype(covers_args_impl<tTags>(
-                    std::declval<t_help>()))::value &&...))
+                     std::declval<t_help>()))::value &&
+                 ...))
     return std::true_type{};
   else
     return std::false_type{};
@@ -202,12 +203,8 @@ template <template_string tTag, typename T> struct named_arg_t {
   constexpr named_arg_t &operator=(named_arg_t &&) noexcept = default;
 
   operator T &() &noexcept { return value_; }
-  operator T &&() &&noexcept {
-    return static_cast<T&&>(value_);
-  }
-  operator T const &() const &noexcept  {
-    return value_;
-  }
+  operator T &&() &&noexcept { return static_cast<T &&>(value_); }
+  operator T const &() const &noexcept { return value_; }
 
   constexpr std::add_lvalue_reference_t<T> value() &noexcept { return value_; }
   constexpr std::conditional_t<std::is_reference_v<T>, T, T &&>
@@ -309,9 +306,10 @@ private:
       else
         return std::false_type{};
     };
-    if constexpr ((decltype(is_fullfilled_f(
-                      std::declval<Ts>()))::value &&...) &&
-                  (decltype(fullfills_any_f(std::declval<Ts2>()))::value &&...))
+    if constexpr ((decltype(is_fullfilled_f(std::declval<Ts>()))::value &&
+                   ...) &&
+                  (decltype(fullfills_any_f(std::declval<Ts2>()))::value &&
+                   ...))
       return true;
     else
       return false;
@@ -608,7 +606,7 @@ class tuple_transform_t : public tuple_transform_constexpr_members<TTuple> {
 public:
   constexpr tuple_transform_t(TFunc f, TTuple &&t) noexcept(
       std::is_nothrow_move_constructible_v<TFunc>)
-      : f_(std::move(f)), tuple_(std::forward<TTuple>(t)) {}
+      : tuple_(std::forward<TTuple>(t)), f_(std::move(f)) {}
   template <template_string tTag, typename TFunc2, typename TTuple2>
   friend constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t);
   template <template_string tTag, typename TFunc2, typename TTuple2>
