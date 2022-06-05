@@ -34,7 +34,9 @@
 # CMake
 cmake-build-*
 out-*
+out/
 
 .idea
 .vs
 .vscode
+CMakeSettings.json

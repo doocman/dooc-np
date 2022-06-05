@@ -6,7 +6,7 @@ enable_testing()
 
 include(GoogleTest)
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang")
+if(${CMAKE_CXX_COMPILER_ID} MATCHES ".*Clang" AND NOT WIN32)
         add_compile_options(-ftemplate-backtrace-limit=0)
 endif ()
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.4)
 
-project(DoocNP VERSION 0.1.0 LANGUAGES CXX)
+project(DoocNP VERSION 0.1.0)
 
 option(DOOC_NP_TESTS "If ON, includes tests for DoocNP. Needs gtest somehow." OFF)
 set(DOOC_NP_TESTS_GTEST download CACHE STRING "If DOOC_NP_TESTS: specifies how google test should be included in the project")
