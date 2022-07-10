@@ -728,7 +728,56 @@ constexpr std::tuple<T const *, T const *>
 construct_extract(named_initializer_list_t<T> v) noexcept {
   return {v.begin(), v.end()};
 }
+
+template<typename>
+struct is_named_tuple_cat_view : std::false_type {};
+
+template<typename... TTuples>
+class named_tuple_cat_view {
+  using tuple_t = std::tuple<TTuples&...>;
+  tuple_t values_;
+
+  template<template_string tTag, typename TView, std::size_t TCur, std::size_t... TNext>
+  static constexpr decltype(auto) do_get(TView&& v, std::index_sequence<TCur, TNext...>) noexcept {
+    using fwd_tuple_t = decltype(std::forward<TView>(v).values_);
+    using clean_tuple_t = std::remove_cvref_t<fwd_tuple_t>;
+    using named_tuple_t = std::remove_cvref_t<std::tuple_element_t<TCur, clean_tuple_t>>;
+    if constexpr (dooc::contains_arg_v<tTag, named_tuple_t>) {
+      return get<tTag>(std::get<TCur>(std::forward<TView>(v).values_));
+    } else {
+      return do_get<tTag>(std::forward<TView>(v), std::index_sequence<TNext...>{});
+    }
+  }
+
+public:
+  constexpr explicit named_tuple_cat_view(TTuples&... ts) noexcept
+   : values_(ts...)
+  {}
+  template<template_string tTag, typename TView>
+  static constexpr decltype(auto) do_get(TView&& v) noexcept {
+    constexpr auto matches = (dooc::contains_arg_v<tTag, TTuples> + ...);
+    static_assert(matches > 0, "element with 'tTag' not found");
+    static_assert(matches < 2, "element with 'tTag' found more than once");
+    using fwd_tuple_t = typename std::remove_cvref_t<TView>::tuple_t;
+    using clean_tuple_t = std::remove_cvref_t<fwd_tuple_t>;
+    return do_get<tTag>(std::forward<TView>(v), std::make_index_sequence<std::tuple_size_v<clean_tuple_t>>{});
+  }
+};
+template<typename... TTuples>
+struct is_named_tuple_cat_view<named_tuple_cat_view<TTuples...>> : std::true_type {};
+template<typename T>
+concept named_tuple_cat_view_c = is_named_tuple_cat_view<std::remove_cvref_t<T>>::value;
 } // namespace details
+
+template<template_string tTag, details::named_tuple_cat_view_c TView>
+constexpr decltype(auto) get(TView&& v) noexcept {
+  return std::remove_cvref_t<TView>::template do_get<tTag>(std::forward<TView>(v));
+}
+
+template<typename... TTuples>
+constexpr details::named_tuple_cat_view<TTuples...> named_tuple_cat_view(TTuples&... t) noexcept {
+  return details::named_tuple_cat_view<TTuples...>(t...);
+}
 
 template <typename... Ts> class construct {
   using tuple_t = decltype(std::tuple_cat(

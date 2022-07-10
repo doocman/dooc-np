@@ -297,4 +297,13 @@ TEST(NamedArg, ConcatTupleWithReferences) // NOLINT
   EXPECT_THAT(get<"a2">(concat_tuple), Ref(v2));
 }
 
+TEST(NamedArg, TupleCatView) // NOLINT
+{
+  auto v1_tuple = named_tuple(named_arg<"a1">(1));
+  auto v2_tuple = named_tuple(named_arg<"a2">(2));
+  auto concat_tuple = named_tuple_cat_view(v1_tuple, v2_tuple);
+  EXPECT_THAT(get<"a1">(concat_tuple), Ref(get<"a1">(v1_tuple)));
+  EXPECT_THAT(get<"a2">(concat_tuple), Ref(get<"a2">(v2_tuple)));
+}
+
 } // namespace dooc
