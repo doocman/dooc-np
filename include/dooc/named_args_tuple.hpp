@@ -101,10 +101,11 @@ struct named_tuple_element<tTag, const volatile T> {
 };
 
 template <typename T>
-concept arg_with_any_name = requires(T) {
-  named_arg_properties<std::remove_cvref_t<T>>::tag;
-  typename named_arg_properties<std::remove_reference_t<T>>::type;
-};
+concept arg_with_any_name =
+    requires(T) {
+      named_arg_properties<std::remove_cvref_t<T>>::tag;
+      typename named_arg_properties<std::remove_reference_t<T>>::type;
+    };
 
 template <arg_with_any_name T, template_string tTag>
 constexpr bool is_tagged_with =
@@ -124,13 +125,16 @@ concept contains_any_of_tags = (arg_with_name<T, tTags> || ...);
 
 template <typename T, template_string tTag, typename T2>
 concept tag_is_type = arg_with_name<T, tTag> && requires(T t) {
-  { get<tTag>(t) } -> std::same_as<T2>;
-};
+                                                  {
+                                                    get<tTag>(t)
+                                                    } -> std::same_as<T2>;
+                                                };
 
 template <typename T, template_string... tTags>
-concept named_tuple_like = (arg_with_name<T, tTags> && ...) && requires {
-  std::tuple_size<std::remove_cvref_t<T>>::value;
-};
+concept named_tuple_like = (arg_with_name<T, tTags> && ...) &&
+                           requires {
+                             std::tuple_size<std::remove_cvref_t<T>>::value;
+                           };
 
 template <typename T>
 constexpr std::size_t tuple_size_v = std::tuple_size<T>::value;
@@ -233,20 +237,20 @@ constexpr decltype(auto) get(T &&t) {
 template <typename T, template_string tTag> struct named_type {
   template <typename T2>
     requires requires(T2) {
-      typename named_arg_properties<std::remove_cvref_t<T2>>::type;
-      { named_arg_properties<T2>::tag } -> std::equality_comparable;
-    }
+               typename named_arg_properties<std::remove_cvref_t<T2>>::type;
+               { named_arg_properties<T2>::tag } -> std::equality_comparable;
+             }
   static constexpr bool is_equivalent =
-      named_arg_properties<T2>::tag == tTag &&
-      std::is_convertible_v<typename named_arg_properties<T2>::type, T>;
+      named_arg_properties<T2>::tag ==
+      tTag &&std::is_convertible_v<typename named_arg_properties<T2>::type, T>;
   static constexpr bool optional = false;
 };
 template <template_string tTag> struct named_auto {
   template <typename T2>
     requires requires(T2) {
-      typename named_arg_properties<T2>::type;
-      { named_arg_properties<T2>::tag } -> std::equality_comparable;
-    }
+               typename named_arg_properties<T2>::type;
+               { named_arg_properties<T2>::tag } -> std::equality_comparable;
+             }
   static constexpr bool is_equivalent = named_arg_properties<T2>::tag == tTag;
   static constexpr bool optional = false;
 };
@@ -266,22 +270,23 @@ template <template_string tTag> struct optional_auto_arg {
 namespace details {
 template <typename TReq, typename... TArgs>
   requires(requires(TReq) {
-    {
-      TReq::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-    { TReq::optional } -> std::convertible_to<bool>;
-  })
-constexpr bool is_equivalent_with_any =
-    TReq::optional || (TReq::template is_equivalent<TArgs> || ...);
+             {
+               TReq::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+             { TReq::optional } -> std::convertible_to<bool>;
+           })
+constexpr bool is_equivalent_with_any = TReq::optional ||
+                                        (TReq::template is_equivalent<TArgs> ||
+                                         ...);
 
 template <typename TArg, typename... TReqs>
   requires(requires(TReqs) {
-    {
-      TReqs::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-  } && ...)
-constexpr bool is_any_equivalent_with =
-    (TReqs::template is_equivalent<TArg> || ...);
+             {
+               TReqs::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+           } && ...)
+constexpr bool is_any_equivalent_with = (TReqs::template is_equivalent<TArg> ||
+                                         ...);
 
 } // namespace details
 template <template_string tTag, typename TTuple>
@@ -293,17 +298,19 @@ constexpr bool contains_arg_v<tTag, TTuple> =
     contains_arg_v<tTag, std::remove_cvref_t<TTuple>>;
 
 template <template_string tTag, typename TTuple>
-  requires(requires() { {TTuple::arg_list_}; })
+  requires(requires() {
+             { TTuple::arg_list_ };
+           })
 constexpr bool contains_arg_v<tTag, TTuple> =
-    details::index_of_template_string_list<tTag>(TTuple::arg_list_) !=
-    TTuple::arg_list_.size();
+    details::index_of_template_string_list<tTag>(
+        TTuple::arg_list_) != TTuple::arg_list_.size();
 
 template <typename... Ts>
   requires(requires(Ts) {
-    {
-      Ts::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-  } && ...)
+             {
+               Ts::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+           } && ...)
 struct arg_list {
 private:
   template <typename... Ts2> static constexpr bool fullfilled_by_impl() {
@@ -372,8 +379,9 @@ private:
 public:
   static constexpr template_string_list_t<tTags...> arg_list_{};
   constexpr named_tuple() noexcept(
-      std::is_nothrow_default_constructible_v<std::tuple<
-          Ts...>>) requires(std::is_default_constructible_v<data_t>) = default;
+      std::is_nothrow_default_constructible_v<std::tuple<Ts...>>)
+    requires(std::is_default_constructible_v<data_t>)
+  = default;
 
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
@@ -445,9 +453,9 @@ public:
 };
 
 template <typename... Ts>
-  requires(is_named_arg<std::remove_cvref_t<Ts>> &&...)
-constexpr named_tuple<std::remove_cvref_t<Ts>...>
-make_named_args(Ts &&...args) {
+  requires(is_named_arg<std::remove_cvref_t<Ts>> && ...)
+constexpr named_tuple<std::remove_cvref_t<Ts>...> make_named_args(
+    Ts &&...args) {
   return named_tuple<std::remove_reference_t<Ts>...>{std::forward<Ts>(args)...};
 }
 
@@ -524,8 +532,7 @@ struct named_tuple_element<tTag, named_tuple_slice_view<TTuple, tTags...>>
 
 template <template_string tTag, typename TTuple, template_string... tTags>
 constexpr bool contains_arg_v<tTag, named_tuple_slice_view<TTuple, tTags...>> =
-    details::index_of_template_string<tTag, tTags...>() !=
-    sizeof...(tTags);
+    details::index_of_template_string<tTag, tTags...>() != sizeof...(tTags);
 
 template <template_string... tTags, typename TTuple>
 constexpr named_tuple_slice_view<TTuple, tTags...> get_slice_view(TTuple &&t) {
@@ -571,20 +578,20 @@ struct tuple_transform_constexpr_members<TTuple> {
 };
 
 template <typename T>
-concept non_void = !std::is_same_v<T, void>;
+concept non_void = !
+std::is_same_v<T, void>;
 
 template <typename TFunc, typename TTuple, template_string... tNames>
   requires(
       (requires(
           TFunc f,
           named_tuple_element_t<tNames, std::remove_reference_t<TTuple>> e) {
-        {
-          f(std::forward<
-                named_tuple_element_t<tNames, std::remove_reference_t<TTuple>>>(
-                e),
-            tNames)
-          } -> non_void;
-      }) &&
+         {
+           f(std::forward<named_tuple_element_t<
+                 tNames, std::remove_reference_t<TTuple>>>(e),
+             tNames)
+           } -> non_void;
+       }) &&
       ...)
 /*requires requires(TFunc f, TTuple &&t) {
   std::tuple(f(get<tNames>(std::forward<TTuple>(t)), tNames)...);
@@ -593,10 +600,11 @@ constexpr void call_for_each(TFunc &&, TTuple &&,
                              template_string_list_t<tNames...>) {}
 
 template <typename TFunc, typename TTuple>
-concept func_works_with_tuple_c = requires(TFunc f, TTuple t) {
-  { contained_tags<std::remove_cvref_t<TTuple>> } -> template_string_list_c;
-  call_for_each(f, t, contained_tags<std::remove_cvref_t<TTuple>>);
-};
+concept func_works_with_tuple_c =
+    requires(TFunc f, TTuple t) {
+      { contained_tags<std::remove_cvref_t<TTuple>> } -> template_string_list_c;
+      call_for_each(f, t, contained_tags<std::remove_cvref_t<TTuple>>);
+    };
 
 template <typename TTuple, func_works_with_tuple_c<TTuple> TFunc>
 class tuple_transform_t : public tuple_transform_constexpr_members<TTuple> {
@@ -729,32 +737,33 @@ construct_extract(named_initializer_list_t<T> v) noexcept {
   return {v.begin(), v.end()};
 }
 
-template<typename>
-struct is_named_tuple_cat_view : std::false_type {};
+template <typename> struct is_named_tuple_cat_view : std::false_type {};
 
-template<typename... TTuples>
-class named_tuple_cat_view {
-  using tuple_t = std::tuple<TTuples&...>;
+template <typename... TTuples> class named_tuple_cat_view {
+  using tuple_t = std::tuple<TTuples &...>;
   tuple_t values_;
 
-  template<template_string tTag, typename TView, std::size_t TCur, std::size_t... TNext>
-  static constexpr decltype(auto) do_get(TView&& v, std::index_sequence<TCur, TNext...>) noexcept {
+  template <template_string tTag, typename TView, std::size_t TCur,
+            std::size_t... TNext>
+  static constexpr decltype(auto)
+  do_get(TView &&v, std::index_sequence<TCur, TNext...>) noexcept {
     using fwd_tuple_t = decltype(std::forward<TView>(v).values_);
     using clean_tuple_t = std::remove_cvref_t<fwd_tuple_t>;
-    using named_tuple_t = std::remove_cvref_t<std::tuple_element_t<TCur, clean_tuple_t>>;
+    using named_tuple_t =
+        std::remove_cvref_t<std::tuple_element_t<TCur, clean_tuple_t>>;
     if constexpr (contains_arg_v<tTag, named_tuple_t>) {
       return get<tTag>(std::get<TCur>(std::forward<TView>(v).values_));
     } else {
-      return do_get<tTag>(std::forward<TView>(v), std::index_sequence<TNext...>{});
+      return do_get<tTag>(std::forward<TView>(v),
+                          std::index_sequence<TNext...>{});
     }
   }
 
 public:
-  constexpr explicit named_tuple_cat_view(TTuples&... ts) noexcept
-   : values_(ts...)
-  {}
-  template<template_string tTag, typename TView>
-  static constexpr decltype(auto) do_get(TView&& v) noexcept {
+  constexpr explicit named_tuple_cat_view(TTuples &...ts) noexcept
+      : values_(ts...) {}
+  template <template_string tTag, typename TView>
+  static constexpr decltype(auto) do_get(TView &&v) noexcept {
     using std::begin, std::end;
     constexpr auto matches = (contains_arg_v<tTag, TTuples> + ...);
     static_assert(matches > 0, "element with 'tTag' not found");
@@ -763,24 +772,29 @@ public:
     constexpr auto match_p = std::find(begin(match_arr), end(match_arr), true);
     constexpr auto tuple_index = std::distance(begin(match_arr), match_p);
     return get<tTag>(std::get<tuple_index>(std::forward<TView>(v).values_));
-    //using fwd_tuple_t = typename std::remove_cvref_t<TView>::tuple_t;
-    //using clean_tuple_t = std::remove_cvref_t<fwd_tuple_t>;
-    //return do_get<tTag>(std::forward<TView>(v), std::make_index_sequence<std::tuple_size_v<clean_tuple_t>>{});
+    // using fwd_tuple_t = typename std::remove_cvref_t<TView>::tuple_t;
+    // using clean_tuple_t = std::remove_cvref_t<fwd_tuple_t>;
+    // return do_get<tTag>(std::forward<TView>(v),
+    // std::make_index_sequence<std::tuple_size_v<clean_tuple_t>>{});
   }
 };
-template<typename... TTuples>
-struct is_named_tuple_cat_view<named_tuple_cat_view<TTuples...>> : std::true_type {};
-template<typename T>
-concept named_tuple_cat_view_c = is_named_tuple_cat_view<std::remove_cvref_t<T>>::value;
+template <typename... TTuples>
+struct is_named_tuple_cat_view<named_tuple_cat_view<TTuples...>>
+    : std::true_type {};
+template <typename T>
+concept named_tuple_cat_view_c =
+    is_named_tuple_cat_view<std::remove_cvref_t<T>>::value;
 } // namespace details
 
-template<template_string tTag, details::named_tuple_cat_view_c TView>
-constexpr decltype(auto) get(TView&& v) noexcept {
-  return std::remove_cvref_t<TView>::template do_get<tTag>(std::forward<TView>(v));
+template <template_string tTag, details::named_tuple_cat_view_c TView>
+constexpr decltype(auto) get(TView &&v) noexcept {
+  return std::remove_cvref_t<TView>::template do_get<tTag>(
+      std::forward<TView>(v));
 }
 
-template<typename... TTuples>
-constexpr details::named_tuple_cat_view<TTuples...> named_tuple_cat_view(TTuples&... t) noexcept {
+template <typename... TTuples>
+constexpr details::named_tuple_cat_view<TTuples...>
+named_tuple_cat_view(TTuples &...t) noexcept {
   return details::named_tuple_cat_view<TTuples...>(t...);
 }
 
@@ -788,22 +802,29 @@ template <template_string tTag, typename... TTuples>
 constexpr bool contains_arg_v<tTag, details::named_tuple_cat_view<TTuples...>> =
     (contains_arg_v<tTag, TTuples> || ...);
 
-template<template_string tTag, typename... TTuples>
+template <template_string tTag, typename... TTuples>
 struct named_tuple_element<tTag, details::named_tuple_cat_view<TTuples...>> {
 private:
   using help_tuple = std::tuple<TTuples...>;
-  static constexpr auto match_count = (static_cast<int>(contains_arg_v<tTag, TTuples>) + ...);
+  static constexpr auto match_count =
+      (static_cast<int>(contains_arg_v<tTag, TTuples>) + ...);
   static_assert(match_count > 0, "Tag not found in tuples");
   static_assert(match_count < 2, "Duplicate tag");
   static constexpr bool match_arr[] = {contains_arg_v<tTag, TTuples>...};
-  static constexpr auto match_index = static_cast<std::size_t>(std::distance(std::begin(match_arr), std::find(std::begin(match_arr), std::end(match_arr), true)));
+  static constexpr auto match_index = static_cast<std::size_t>(std::distance(
+      std::begin(match_arr),
+      std::find(std::begin(match_arr), std::end(match_arr), true)));
 
 public:
-  using type = named_tuple_element_t<tTag, std::tuple_element_t<match_index, help_tuple>>;
+  using type =
+      named_tuple_element_t<tTag,
+                            std::tuple_element_t<match_index, help_tuple>>;
 };
-template<template_string tTag, typename... TTuples>
-struct named_tuple_element<tTag, details::named_tuple_cat_view<TTuples...> const> {
-  using type = named_tuple_element_t<tTag, details::named_tuple_cat_view<TTuples...>>;
+template <template_string tTag, typename... TTuples>
+struct named_tuple_element<tTag,
+                           details::named_tuple_cat_view<TTuples...> const> {
+  using type =
+      named_tuple_element_t<tTag, details::named_tuple_cat_view<TTuples...>>;
 };
 
 template <typename... Ts> class construct {
@@ -818,7 +839,7 @@ public:
 
   template <typename T> explicit constexpr operator T() const {
     return std::apply(
-        []<typename... Ts2>(Ts2 && ...args) {
+        []<typename... Ts2>(Ts2 &&...args) {
           return T(std::forward<Ts2>(args)...);
         },
         data_);
@@ -851,7 +872,8 @@ template <template_string tTag, typename TTuple, typename TFunc>
 struct named_tuple_element<tTag, details::tuple_transform_t<TTuple, TFunc>> {
   using type = decltype(std::declval<TFunc>()(
       std::declval<
-          named_tuple_element_t<tTag, std::remove_reference_t<TTuple>>>(), tTag));
+          named_tuple_element_t<tTag, std::remove_reference_t<TTuple>>>(),
+      tTag));
 };
 template <template_string tTag, typename TTuple, typename TFunc>
 struct named_tuple_element<tTag,
@@ -892,18 +914,20 @@ contains_arg(details::tuple_transform_t<TTuple, TFunc> const &) noexcept {
 
 template <typename TNamedTuple>
   requires requires() {
-    { std::remove_cvref_t<TNamedTuple>::arg_list_ } -> template_string_list_c;
-  }
+             {
+               std::remove_cvref_t<TNamedTuple>::arg_list_
+               } -> template_string_list_c;
+           }
 constexpr decltype(auto) apply(auto &&callable, TNamedTuple &&t) noexcept {
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t),
                               t.arg_list_);
 }
 
 template <typename TNamedTuple, template_string... tArgOrder>
-  requires(contains_arg_v<tArgOrder, std::remove_cvref_t<TNamedTuple>> &&...)
+  requires(contains_arg_v<tArgOrder, std::remove_cvref_t<TNamedTuple>> && ...)
 constexpr decltype(auto)
-apply(auto &&callable, TNamedTuple &&t,
-      template_string_list_t<tArgOrder...> arg_list) noexcept {
+    apply(auto &&callable, TNamedTuple &&t,
+          template_string_list_t<tArgOrder...> arg_list) noexcept {
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t), arg_list);
 }
 
