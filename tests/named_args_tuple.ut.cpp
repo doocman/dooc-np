@@ -68,7 +68,7 @@ TEST(NamedTuple, TupleCat) // NOLINT
 
 TEST(NamedTuple, ElementExists) // NOLINT
 {
-  named_tuple t1 = ("arg1"_na(2));
+  named_tuple t1("arg1"_na(2), "arg3"_na(55));
   static_assert(contains_arg<"arg1">(t1));
   static_assert(!contains_arg<"arg2">(t1));
 }
@@ -262,7 +262,7 @@ struct optional_arg_impl {
                            Ts...>)
   std::pair<bool, bool> operator()(Ts const &...) const {
     return {arg_provided<"arg1", Ts...>, arg_provided<"arg2", Ts...>};
-    }
+  }
 };
 
 TEST(NamedArg, OptionalArgs) // NOLINT
@@ -295,6 +295,41 @@ TEST(NamedArg, ConcatTupleWithReferences) // NOLINT
   auto concat_tuple = named_tuple_cat(v1_tuple, v2_tuple);
   EXPECT_THAT(get<"a1">(concat_tuple), Ref(v1));
   EXPECT_THAT(get<"a2">(concat_tuple), Ref(v2));
+}
+
+TEST(NamedArg, TupleCatView) // NOLINT
+{
+  auto v1_tuple = named_tuple(named_arg<"a1">(1));
+  auto v2_tuple = named_tuple(named_arg<"a2">(2));
+  auto concat_tuple = named_tuple_cat_view(v1_tuple, v2_tuple);
+  static_assert(
+      std::is_same_v<named_tuple_element_t<
+                         "a1", std::remove_reference_t<decltype(concat_tuple)>>,
+                     int>);
+  static_assert(
+      std::is_same_v<named_tuple_element_t<
+                         "a2", std::remove_reference_t<decltype(concat_tuple)>>,
+                     int>);
+  EXPECT_THAT(get<"a1">(concat_tuple), Ref(get<"a1">(v1_tuple)));
+  EXPECT_THAT(get<"a2">(concat_tuple), Ref(get<"a2">(v2_tuple)));
+  auto sl = get_slice_view<"a1">(concat_tuple);
+  EXPECT_THAT(get<"a1">(sl), Ref(get<"a1">(v1_tuple)));
+}
+
+TEST(NamedArg, CatViewOfTransform) // NOLINT
+{
+  auto v1_tuple = named_tuple(named_arg<"a1">(1));
+  auto v2_tuple_raw = named_tuple(named_arg<"a2">(2));
+  auto v2_tuple = transform([](auto const &v, auto const &) { return v + 1; },
+                            v2_tuple_raw);
+  auto v3_tuple_raw =
+      named_tuple(named_arg<"a3">(3), named_arg<"not used">(677));
+  auto v3_tuple = get_slice_view<"a3">(v3_tuple_raw);
+  auto concat_tuple = named_tuple_cat_view(v1_tuple, v2_tuple, v3_tuple);
+  EXPECT_THAT(get<"a2">(concat_tuple), Eq(get<"a2">(v2_tuple)));
+  auto sliced = get_slice_view<"a1">(concat_tuple);
+  EXPECT_THAT(get<"a1">(sliced), Ref(get<"a1">(v1_tuple)));
+  EXPECT_THAT(get<"a3">(concat_tuple), Ref(get<"a3">(v3_tuple_raw)));
 }
 
 } // namespace dooc
