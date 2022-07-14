@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 3.15)
+#          Copyright Robin Söderholm 2021 - 2022.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          https://www.boost.org/LICENSE_1_0.txt)
+
+cmake_minimum_required(VERSION 3.4...3.22)
 
 set(CURRENT_TARGET_NAME dooc_named_parameters.tests)
 

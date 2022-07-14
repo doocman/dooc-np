@@ -1,4 +1,3 @@
-
 //          Copyright Robin Söderholm 2021 - 2022.
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -266,16 +265,20 @@ template <typename TArg, typename... TReqs>
 constexpr bool is_any_equivalent_with =
     (TReqs::template is_equivalent<TArg> || ...);
 
+template<typename T>
+concept pure_type_c = std::is_same_v<T, std::remove_cvref_t<T>>;
+template<typename T>
+concept non_pure_type_c = !pure_type_c<T>;
+
 } // namespace details
 template <template_string tTag, typename TTuple>
 constexpr bool contains_arg_v = false;
 
-template <template_string tTag, typename TTuple>
-  requires(!std::is_same_v<TTuple, std::remove_cvref_t<TTuple>>)
+template <template_string tTag, details::non_pure_type_c TTuple>
 constexpr bool contains_arg_v<tTag, TTuple> =
     contains_arg_v<tTag, std::remove_cvref_t<TTuple>>;
 
-template <template_string tTag, typename TTuple>
+template <template_string tTag, details::pure_type_c TTuple>
   requires(requires() { {TTuple::arg_list_}; })
 constexpr bool contains_arg_v<tTag, TTuple> =
     details::index_of_template_string_list<tTag>(TTuple::arg_list_) !=
