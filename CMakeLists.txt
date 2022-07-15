@@ -1,8 +1,14 @@
-cmake_minimum_required(VERSION 3.4)
+#          Copyright Robin Söderholm 2021 - 2022.
+# Distributed under the Boost Software License, Version 1.0.
+#    (See accompanying file LICENSE_1_0.txt or copy at
+#          https://www.boost.org/LICENSE_1_0.txt)
+
+cmake_minimum_required(VERSION 3.4...3.22)
 
 project(DoocNP VERSION 0.1.0)
 
-option(DOOC_NP_TESTS "If ON, includes tests for DoocNP. Needs gtest somehow." OFF)
+set(DOOC_NP_TESTS OFF CACHE BOOL "If ON, includes tests for DoocNP. Needs gtest somehow.")
+set(DOOC_NP_PRECOMPILED_HEADER OFF CACHE BOOL "If ON, add an extra 'dooc::named_parameters_precomiled' and dooc_named_parameters_precompiled target that have precompiled versions of the header files")
 set(DOOC_NP_TESTS_GTEST download CACHE STRING "If DOOC_NP_TESTS: specifies how google test should be included in the project")
 
 add_library(dooc_named_parameters INTERFACE)
@@ -12,6 +18,20 @@ target_include_directories(dooc_named_parameters
         INTERFACE
         include
         )
+
+if(DOOC_NP_PRECOMPILED_HEADER)
+    add_library(dooc_named_parameters_precompiled INTERFACE)
+    add_library(dooc::named_parameters_precompiled ALIAS dooc_named_parameters_precompiled)
+
+    target_link_libraries(dooc_named_parameters_precompiled
+            INTERFACE
+            dooc::named_parameters
+            )
+    target_precompile_headers(dooc_named_parameters_precompiled
+            INTERFACE
+            include/dooc/named_args_tuple.hpp
+            )
+endif()
 
 if(DOOC_NP_TESTS)
     set(CMAKE_CXX_STANDARD 20)
