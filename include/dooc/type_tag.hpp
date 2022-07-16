@@ -14,7 +14,7 @@ namespace dooc {
 namespace details {
 template <typename... Ts>
 constexpr inline void dooc_np_unused(Ts const &...) noexcept {}
-}
+} // namespace details
 template <std::size_t tN> struct template_string {
   std::array<char, tN - 1> data_;
   using size_type = std::size_t;
@@ -42,19 +42,12 @@ constexpr std::size_t size(template_string<tN> const &) noexcept {
   return tN;
 }
 
-// template <template_string> struct template_tag {};
-
 template <typename T, std::size_t tN>
   requires std::is_convertible_v<T, std::string_view>
 constexpr bool operator==(T const &lhs, template_string<tN> const &rhs) {
   return static_cast<std::string_view>(lhs) ==
          static_cast<std::string_view>(rhs);
 }
-
-/*template <template_string t1, template_string t2>
-constexpr bool operator==(template_tag<t1> const &, template_tag<t2> const &) {
-  return t1 == t2;
-}*/
 
 template <template_string... tTags> struct template_string_list_t {
 public:

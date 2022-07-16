@@ -260,7 +260,8 @@ struct optional_arg_impl {
     requires(args_fullfill<arg_list<optional_typed_arg<int, "arg1">,
                                     optional_auto_arg<"arg2">>,
                            Ts...>)
-  std::pair<bool, bool> operator()(Ts const &...) const {
+  std::pair<bool, bool>
+  operator()(Ts const &...) const {
     return {arg_provided<"arg1", Ts...>, arg_provided<"arg2", Ts...>};
   }
 };
@@ -337,10 +338,12 @@ TEST(NamedArg, TupleForEach) // NOLINT
   constexpr auto v1_tuple = named_tuple("1"_na(1), "2"_na(2), "3"_na(3));
   std::vector<int> v_ints;
   std::vector<std::string> v_strings;
-  tuple_for_each([&v_ints, &v_strings](std::string_view name, int value) {
-    v_ints.push_back(value);
-    v_strings.emplace_back(name);
-  }, v1_tuple);
+  tuple_for_each(
+      [&v_ints, &v_strings](std::string_view name, int value) {
+        v_ints.push_back(value);
+        v_strings.emplace_back(name);
+      },
+      v1_tuple);
   EXPECT_THAT(v_ints, ElementsAre(1, 2, 3));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1"), StrEq("2"), StrEq("3")));
 }
@@ -350,20 +353,24 @@ TEST(NamedArg, DynamicFor) // NOLINT
   constexpr auto v1_tuple = named_tuple("1"_na(1), "2"_na(2), "3"_na(3));
   std::vector<int> v_ints;
   std::vector<std::string> v_strings;
-  auto values_missing = dynamic_for_each([&v_ints, &v_strings](std::string_view name, int value) {
-    v_ints.push_back(value);
-    v_strings.emplace_back(name);
-  }, v1_tuple, {"1", "2"});
+  auto values_missing = dynamic_for_each(
+      [&v_ints, &v_strings](std::string_view name, int value) {
+        v_ints.push_back(value);
+        v_strings.emplace_back(name);
+      },
+      v1_tuple, {"1", "2"});
   EXPECT_THAT(values_missing, Eq(0));
   EXPECT_THAT(v_ints, ElementsAre(1, 2));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1"), StrEq("2")));
 
   v_ints.clear();
   v_strings.clear();
-  values_missing = dynamic_for_each([&v_ints, &v_strings](std::string_view name, int value) {
-    v_ints.push_back(value);
-    v_strings.emplace_back(name);
-  }, v1_tuple, {"1", "4"});
+  values_missing = dynamic_for_each(
+      [&v_ints, &v_strings](std::string_view name, int value) {
+        v_ints.push_back(value);
+        v_strings.emplace_back(name);
+      },
+      v1_tuple, {"1", "4"});
   EXPECT_THAT(values_missing, Eq(1));
   EXPECT_THAT(v_ints, ElementsAre(1));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1")));
