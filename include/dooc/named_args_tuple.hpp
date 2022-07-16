@@ -9,13 +9,35 @@
 #include <algorithm>
 #include <concepts>
 #include <span>
+#include <numeric>
 #include <type_traits>
 
+#include <dooc/concepts.hpp>
 #include <dooc/type_tag.hpp>
 
 namespace dooc {
-template <typename T>
-constexpr template_string_list_t contained_tags = T::arg_list_;
+
+template<typename>
+struct contained_tags {};
+
+template<ref_or_qualified_type T>
+struct contained_tags<T> : contained_tags<std::remove_cvref_t<T>>{};
+
+template<pure_type T>
+requires(requires(T) { {T::tags_list} -> template_string_list_c;})
+struct contained_tags<T> {
+  static constexpr template_string_list_t value = T::tags_list;
+};
+
+template<typename T>
+concept has_tags_list = requires(T) {
+                          {contained_tags<T>::value} -> template_string_list_c;
+                        };
+
+template<typename T>
+constexpr template_string_list_t contained_tags_v = contained_tags<T>::value;
+template<typename T>
+using contained_tags_t = std::remove_cvref_t<decltype(contained_tags_v<T>)>;
 
 template <template_string, typename T> struct named_arg_t;
 template <typename...> struct named_tuple;
@@ -113,8 +135,8 @@ concept tag_is_type = arg_with_name<T, tTag> && requires(T t) {
                                                     } -> std::same_as<T2>;
                                                 };
 
-template <typename T, template_string... tTags>
-concept named_tuple_like = (arg_with_name<T, tTags> && ...) &&
+template <typename T>
+concept named_tuple_like = has_tags_list<T> &&
                            requires {
                              std::tuple_size<std::remove_cvref_t<T>>::value;
                            };
@@ -287,11 +309,11 @@ constexpr bool contains_arg_v<tTag, TTuple> =
 
 template <template_string tTag, details::pure_type_c TTuple>
   requires(requires() {
-             { TTuple::arg_list_ };
+             { contained_tags<TTuple>::value } -> template_string_list_c;
            })
 constexpr bool contains_arg_v<tTag, TTuple> =
     details::index_of_template_string_list<tTag>(
-        TTuple::arg_list_) != TTuple::arg_list_.size();
+        contained_tags_v<TTuple>) != contained_tags_v<TTuple>.size();
 
 template <typename... Ts>
   requires(requires(Ts) {
@@ -365,7 +387,7 @@ private:
   data_t data_;
 
 public:
-  static constexpr template_string_list_t<tTags...> arg_list_{};
+  static constexpr template_string_list_t<tTags...> tags_list{};
   constexpr named_tuple() noexcept(
       std::is_nothrow_default_constructible_v<std::tuple<Ts...>>)
     requires(std::is_default_constructible_v<data_t>)
@@ -485,7 +507,6 @@ class named_tuple_slice_view {
   TTuple tuple_;
 
 public:
-  static constexpr template_string_list_t<tTags...> arg_list_{};
   explicit constexpr named_tuple_slice_view(TTuple &&t)
       : tuple_(std::forward<TTuple>(t)) {}
 
@@ -514,6 +535,12 @@ public:
     return get<tTag>(std::move(tuple.tuple_));
   }
 };
+
+template <typename TTuple, template_string... tTags>
+struct contained_tags<named_tuple_slice_view<TTuple, tTags...>> {
+  static constexpr template_string_list_t<tTags...> value{};
+};
+
 template <template_string tTag, typename TTuple, template_string... tTags>
 struct named_tuple_element<tTag, named_tuple_slice_view<TTuple, tTags...>>
     : named_tuple_element<tTag, std::remove_reference_t<TTuple>> {};
@@ -559,12 +586,6 @@ struct get_slice_help<template_string_list_t<tTags...>> {
 
 template <typename> struct tuple_transform_constexpr_members {};
 
-template <typename TTuple>
-  requires requires(TTuple) { TTuple::arg_list_; }
-struct tuple_transform_constexpr_members<TTuple> {
-  static constexpr template_string_list_t arg_list_ = TTuple::arg_list_;
-};
-
 template <typename T>
 concept non_void = !
 std::is_same_v<T, void>;
@@ -587,15 +608,23 @@ template <typename TFunc, typename TTuple, template_string... tNames>
 constexpr void call_for_each(TFunc &&, TTuple &&,
                              template_string_list_t<tNames...>) {}
 
+template<typename, typename, typename>
+struct callable_for_each_in_tuple_impl;
+template<typename T, typename TTuple, template_string... tTags>
+struct callable_for_each_in_tuple_impl<T, TTuple, template_string_list_t<tTags...>> : std::bool_constant<std::is_invocable_v<T, std::string_view, named_tuple_element<tTags, TTuple> && ...>>
+{};
+
+template<typename T, typename TTuple>
+concept callable_for_each_in_tuple = named_tuple_like<TTuple> && callable_for_each_in_tuple_impl<T, TTuple, contained_tags_t<TTuple>>::value;
+
 template <typename TFunc, typename TTuple>
-concept func_works_with_tuple_c =
+concept func_works_with_tuple_c = has_tags_list<TTuple> &&
     requires(TFunc f, TTuple t) {
-      { contained_tags<std::remove_cvref_t<TTuple>> } -> template_string_list_c;
-      call_for_each(f, t, contained_tags<std::remove_cvref_t<TTuple>>);
+      call_for_each(f, t, contained_tags_v<std::remove_cvref_t<TTuple>>);
     };
 
 template <typename TTuple, func_works_with_tuple_c<TTuple> TFunc>
-class tuple_transform_t : public tuple_transform_constexpr_members<TTuple> {
+class tuple_transform_t {
   TTuple tuple_;
   TFunc f_;
 
@@ -634,6 +663,8 @@ constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t) {
   return t.f_(get<tIndex>(t.tuple_));
 }
 } // namespace details
+template <typename TTuple, typename TFunc>
+struct contained_tags<details::tuple_transform_t<TTuple, TFunc>> : contained_tags<TTuple>{};
 
 template <template_string_list_c tTags, typename TTuple>
 constexpr auto get_slice_view(TTuple const &t) {
@@ -896,15 +927,10 @@ contains_arg(details::tuple_transform_t<TTuple, TFunc> const &) noexcept {
   return contains_arg_v<tTag, TTuple>;
 }
 
-template <typename TNamedTuple>
-  requires requires() {
-             {
-               std::remove_cvref_t<TNamedTuple>::arg_list_
-               } -> template_string_list_c;
-           }
+template <has_tags_list TNamedTuple>
 constexpr decltype(auto) apply(auto &&callable, TNamedTuple &&t) noexcept {
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t),
-                              t.arg_list_);
+                              contained_tags_v<TNamedTuple>);
 }
 
 template <typename TNamedTuple, template_string... tArgOrder>
@@ -917,11 +943,44 @@ constexpr decltype(auto)
 
 template < // named_tuple_like TTuple,
     typename TTuple,
-    // details::func_works_with_tuple_c<TTuple> TFunc
-    typename TFunc>
+    details::func_works_with_tuple_c<TTuple> TFunc
+    //typename TFunc
+    >
 constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
                                                               TTuple &&t) {
   return {std::move(f), std::forward<TTuple>(t)};
+}
+
+
+template<named_tuple_like TTuple, details::callable_for_each_in_tuple<TTuple> TFunc, template_string... tTags>
+requires(contains_arg_v<tTags, TTuple> && ...)
+constexpr void tuple_for_each(TFunc&& f, TTuple&& t, template_string_list_t<tTags...>) {
+  ((std::forward<TFunc>(f)(std::string_view(tTags), get<tTags>(std::forward<TTuple>(t))), false) || ...);
+}
+
+template<named_tuple_like TTuple, details::callable_for_each_in_tuple<TTuple> TFunc>
+constexpr void tuple_for_each(TFunc&& f, TTuple&& t) {
+  tuple_for_each(std::forward<TFunc>(f), std::forward<TTuple>(t), contained_tags_v<TTuple>);
+}
+
+
+template<typename TFunc, typename TTuple, std::convertible_to<std::string_view> TString>
+constexpr std::ptrdiff_t dynamic_apply_single(TFunc&& f, TTuple&& t, TString const& str) {
+  std::ptrdiff_t res = 1;
+  //tuple_for_each([&f, &str, &res] <typename T> (std::string_view name, T&& value) {
+  //  if(name == str) {
+  //    --res;
+  //    std::forward<TFunc>(f)(name, std::forward<T>(value));
+  //  }
+  //}, t);
+  return res;
+}
+
+template<typename TFunc, typename TTuple, typename TString>
+constexpr std::ptrdiff_t dynamic_for_each(TFunc&& f, TTuple&& t, std::initializer_list<TString> args) {
+  return std::transform_reduce(begin(args), end(args), std::ptrdiff_t{}, std::plus(), [&f, &t] (auto const& arg) {
+    return dynamic_apply_single(std::forward<TFunc>(f), std::forward<TTuple>(t), arg);
+  });
 }
 
 namespace tuple_literals {
@@ -938,17 +997,25 @@ constexpr details::get_named_arg_t<tTag> operator"" _from() noexcept {
 } // namespace dooc
 
 namespace std {
-template <dooc::template_string... tTags, typename... Ts>
-struct tuple_size<dooc::named_tuple<dooc::named_arg_t<tTags, Ts>...>>
+template <::dooc::template_string... tTags, typename... Ts>
+struct tuple_size<::dooc::named_tuple<dooc::named_arg_t<tTags, Ts>...>>
     : integral_constant<std::size_t, sizeof...(tTags)> {};
 
-template <typename TTuple, dooc::template_string... tTags>
-struct tuple_size<dooc::named_tuple_slice_view<TTuple, tTags...>>
+template <typename TTuple, ::dooc::template_string... tTags>
+struct tuple_size<::dooc::named_tuple_slice_view<TTuple, tTags...>>
     : integral_constant<std::size_t, sizeof...(tTags)> {};
 
 template <typename TFunc, typename TTuple>
-struct tuple_size<dooc::details::tuple_transform_t<TTuple, TFunc>>
+struct tuple_size<::dooc::details::tuple_transform_t<TTuple, TFunc>>
     : tuple_size<TTuple> {};
+
+template<typename... TTuples>
+struct tuple_size<::dooc::details::named_tuple_cat_view<TTuples...>>
+: integral_constant<std::size_t, (tuple_size_v<TTuples> + ...)>
+{
+
+};
+
 } // namespace std
 
 #endif
