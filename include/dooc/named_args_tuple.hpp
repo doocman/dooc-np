@@ -198,7 +198,6 @@ constexpr bool args_fullfill = TArgList::template fullfilled_by<Ts...>;
 
 template <template_string tTag, typename T> struct named_arg_t {
   using type = T;
-  // static constexpr template_string tag = tTag;
   T value_;
   constexpr named_arg_t() = default;
   explicit constexpr named_arg_t(T const &v) : value_(v) {}
@@ -357,10 +356,10 @@ template <template_string tTag, arg_with_any_name T, arg_with_any_name T2,
            (is_tagged_with<Ts, tTag> || ...))
 constexpr decltype(auto) get(T &&t, T2 &&t2, Ts &&...ts) {
   if constexpr (is_tagged_with<T, tTag>) {
-    unused(t2);
+    details::dooc_np_unused(t2);
     return get<tTag>(std::forward<T>(t));
   } else {
-    unused(t);
+    details::dooc_np_unused(t);
     return get<tTag>(std::forward<T2>(t2), std::forward<Ts>(ts)...);
   }
 }
@@ -371,10 +370,10 @@ constexpr bool arg_provided = ((is_tagged_with<Ts, tTag> || ...));
 template <template_string tTag, typename T, arg_with_any_name... Ts>
 constexpr decltype(auto) get_or(T &&default_return, Ts &&...args) {
   if constexpr ((is_tagged_with<Ts, tTag> || ...)) {
-    unused(default_return);
+    details::dooc_np_unused(default_return);
     return get<tTag>(std::forward<Ts>(args)...);
   } else {
-    unused(args...);
+    details::dooc_np_unused(args...);
     return std::forward<T>(default_return);
   }
 }
@@ -422,7 +421,7 @@ public:
              details::is_tuple_convertible_v<std::remove_cvref_t<TTuple>,
                                              named_tuple>)
   named_tuple &operator=(TTuple const &t) {
-    unused(((get<tTags>(*this) = get<tTags>(t), 0) + ...));
+    details::dooc_np_unused(((get<tTags>(*this) = get<tTags>(t), 0) + ...));
     return *this;
   }
 
@@ -611,7 +610,7 @@ constexpr void call_for_each(TFunc &&, TTuple &&,
 template<typename, typename, typename>
 struct callable_for_each_in_tuple_impl;
 template<typename T, typename TTuple, template_string... tTags>
-struct callable_for_each_in_tuple_impl<T, TTuple, template_string_list_t<tTags...>> : std::bool_constant<std::is_invocable_v<T, std::string_view, named_tuple_element<tTags, TTuple> && ...>>
+struct callable_for_each_in_tuple_impl<T, TTuple, template_string_list_t<tTags...>> : std::bool_constant<(std::is_invocable_v<T, std::string_view, decltype(get<tTags>(std::declval<TTuple>()))> && ...)>
 {};
 
 template<typename T, typename TTuple>
@@ -941,10 +940,8 @@ constexpr decltype(auto)
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t), arg_list);
 }
 
-template < // named_tuple_like TTuple,
-    typename TTuple,
+template < named_tuple_like TTuple,
     details::func_works_with_tuple_c<TTuple> TFunc
-    //typename TFunc
     >
 constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
                                                               TTuple &&t) {
@@ -955,7 +952,7 @@ constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
 template<named_tuple_like TTuple, details::callable_for_each_in_tuple<TTuple> TFunc, template_string... tTags>
 requires(contains_arg_v<tTags, TTuple> && ...)
 constexpr void tuple_for_each(TFunc&& f, TTuple&& t, template_string_list_t<tTags...>) {
-  ((std::forward<TFunc>(f)(std::string_view(tTags), get<tTags>(std::forward<TTuple>(t))), false) || ...);
+  details::dooc_np_unused(((std::forward<TFunc>(f)(std::string_view(tTags), get<tTags>(std::forward<TTuple>(t))), false) || ...));
 }
 
 template<named_tuple_like TTuple, details::callable_for_each_in_tuple<TTuple> TFunc>
@@ -967,12 +964,12 @@ constexpr void tuple_for_each(TFunc&& f, TTuple&& t) {
 template<typename TFunc, typename TTuple, std::convertible_to<std::string_view> TString>
 constexpr std::ptrdiff_t dynamic_apply_single(TFunc&& f, TTuple&& t, TString const& str) {
   std::ptrdiff_t res = 1;
-  //tuple_for_each([&f, &str, &res] <typename T> (std::string_view name, T&& value) {
-  //  if(name == str) {
-  //    --res;
-  //    std::forward<TFunc>(f)(name, std::forward<T>(value));
-  //  }
-  //}, t);
+  tuple_for_each([&f, &str, &res] <typename T> (std::string_view name, T&& value) {
+    if(name == str) {
+      --res;
+      std::forward<TFunc>(f)(name, std::forward<T>(value));
+    }
+  }, t);
   return res;
 }
 

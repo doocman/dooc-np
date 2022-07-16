@@ -11,9 +11,10 @@
 #include <string_view>
 
 namespace dooc {
+namespace details {
 template <typename... Ts>
-constexpr inline void unused(Ts const &...) noexcept {}
-
+constexpr inline void dooc_np_unused(Ts const &...) noexcept {}
+}
 template <std::size_t tN> struct template_string {
   std::array<char, tN - 1> data_;
   using size_type = std::size_t;

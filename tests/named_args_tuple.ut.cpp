@@ -358,12 +358,12 @@ TEST(NamedArg, DynamicFor) // NOLINT
   EXPECT_THAT(v_ints, ElementsAre(1, 2));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1"), StrEq("2")));
 
+  v_ints.clear();
+  v_strings.clear();
   values_missing = dynamic_for_each([&v_ints, &v_strings](std::string_view name, int value) {
     v_ints.push_back(value);
     v_strings.emplace_back(name);
   }, v1_tuple, {"1", "4"});
-  v_ints.clear();
-  v_strings.clear();
   EXPECT_THAT(values_missing, Eq(1));
   EXPECT_THAT(v_ints, ElementsAre(1));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1")));
