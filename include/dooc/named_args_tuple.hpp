@@ -951,7 +951,7 @@ template <named_tuple_like TTuple,
 constexpr void tuple_for_each(TFunc &&f, TTuple &&t,
                               template_string_list_t<tTags...>) {
   details::dooc_np_unused(
-      ((std::forward<TFunc>(f)(std::string_view(tTags),
+      ((std::forward<TFunc>(f)(tTags,
                                get<tTags>(std::forward<TTuple>(t))),
         false) ||
        ...));
