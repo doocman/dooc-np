@@ -50,9 +50,15 @@ constexpr bool operator==(T const &lhs, template_string<tN> const &rhs) {
 }
 
 template <template_string... tTags> struct template_string_list_t {
-public:
   static constexpr std::size_t size() noexcept { return sizeof...(tTags); }
 };
+
+template <template_string... tTags1, template_string... tTags2>
+constexpr template_string_list_t<tTags1..., tTags2...>
+operator+(template_string_list_t<tTags1...>,
+          template_string_list_t<tTags2...>) noexcept {
+  return {};
+}
 
 template <typename> constexpr bool is_template_string_list = false;
 
@@ -62,6 +68,11 @@ constexpr bool is_template_string_list<template_string_list_t<tTags...>> = true;
 template <typename T>
 concept template_string_list_c =
     is_template_string_list<std::remove_cvref_t<T>>;
+
+constexpr auto
+combine_string_lists(template_string_list_c auto const &...lists) noexcept {
+  return (lists + ...);
+}
 
 } // namespace dooc
 

@@ -331,6 +331,14 @@ TEST(NamedArg, CatViewOfTransform) // NOLINT
   auto sliced = get_slice_view<"a1">(concat_tuple);
   EXPECT_THAT(get<"a1">(sliced), Ref(get<"a1">(v1_tuple)));
   EXPECT_THAT(get<"a3">(concat_tuple), Ref(get<"a3">(v3_tuple_raw)));
+
+  static_assert(has_tags_list<std::remove_cvref_t<decltype(concat_tuple)>>);
+
+  auto concat_transformed = transform(
+      [](auto const &v, auto const &) { return v + 1; }, concat_tuple);
+  EXPECT_THAT(get<"a2">(concat_transformed), Eq(get<"a2">(v2_tuple) + 1));
+  EXPECT_THAT(get<"a1">(concat_transformed), Eq(get<"a1">(concat_tuple) + 1));
+  EXPECT_THAT(get<"a3">(concat_transformed), Eq(get<"a3">(concat_tuple) + 1));
 }
 
 TEST(NamedArg, TupleForEach) // NOLINT
