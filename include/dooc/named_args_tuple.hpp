@@ -661,7 +661,7 @@ template <has_tags_list... TTuples> class named_tuple_cat_view;
 } // namespace details
 
 template <has_tags_list... TTuples>
-struct contained_tags<named_tuple_cat_view<TTuples...>> {
+struct contained_tags<details::named_tuple_cat_view<TTuples...>> {
   static constexpr template_string_list_t value =
       (contained_tags_v<TTuples> + ...);
 };
