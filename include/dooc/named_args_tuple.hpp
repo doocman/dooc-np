@@ -656,7 +656,16 @@ template <std::size_t tIndex, typename TFunc2, typename TTuple2>
 constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t) {
   return t.f_(get<tIndex>(t.tuple_));
 }
+
+template <has_tags_list... TTuples> class named_tuple_cat_view;
 } // namespace details
+
+template <has_tags_list... TTuples>
+struct contained_tags<named_tuple_cat_view<TTuples...>> {
+  static constexpr template_string_list_t value =
+      (contained_tags_v<TTuples> + ...);
+};
+
 template <typename TTuple, typename TFunc>
 struct contained_tags<details::tuple_transform_t<TTuple, TFunc>>
     : contained_tags<TTuple> {};
@@ -752,14 +761,6 @@ construct_extract(named_initializer_list_t<T> v) noexcept {
 }
 
 template <typename> struct is_named_tuple_cat_view : std::false_type {};
-
-template <has_tags_list... TTuples> class named_tuple_cat_view;
-
-template <has_tags_list... TTuples>
-struct contained_tags<named_tuple_cat_view<TTuples...>> {
-  static constexpr template_string_list_t value =
-      (contained_tags_v<TTuples> + ...);
-};
 
 template <has_tags_list... TTuples> class named_tuple_cat_view {
   using tuple_t = std::tuple<TTuples &...>;
