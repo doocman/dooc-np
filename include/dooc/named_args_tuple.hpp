@@ -953,9 +953,12 @@ constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
 }
 
 template <named_tuple_like TTuple,
-          details::callable_for_each_in_tuple<TTuple> TFunc,
+          typename TFunc,
           template_string... tTags>
-  requires(contains_arg_v<tTags, TTuple> &&...)
+  requires((contains_arg_v<tTags, TTuple> &&...) && (std::invocable<
+           TFunc, decltype(tTags),
+           named_tuple_element_t<tTags, std::remove_reference_t<TTuple>>> &&
+       ...))
 constexpr void tuple_for_each(TFunc &&f, TTuple &&t,
                               template_string_list_t<tTags...>) {
   details::dooc_np_unused(
