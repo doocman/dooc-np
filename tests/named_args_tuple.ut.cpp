@@ -386,14 +386,19 @@ TEST(NamedArg, DynamicFor) // NOLINT
 
 TEST(NamedArg, ForEachFunctionOnlyWorksWithChosenElements) // NOLINT
 {
-  constexpr auto v1_tuple =
+  auto v1_tuple =
       named_tuple("1"_na(1), "2"_na(2), "3"_na(std::string_view("not an int")));
 
   std::vector<int> values;
   tuple_for_each(
-      [&values](auto const &, int value) { values.push_back(value); }, v1_tuple,
-      template_string_list_t<"1">{});
+      [&values](auto const &, int &value) { values.push_back(value); },
+      v1_tuple, template_string_list_t<"1">{});
   EXPECT_THAT(values, ElementsAre(1));
+  values.clear();
+  tuple_for_each(
+      [&values](auto const &, int &value) { values.push_back(value); },
+      v1_tuple, template_string_list_t<"1", "2">{});
+  EXPECT_THAT(values, ElementsAre(1, 2));
 }
 
 } // namespace dooc
