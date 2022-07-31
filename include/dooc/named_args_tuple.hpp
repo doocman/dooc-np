@@ -582,42 +582,40 @@ template <typename> struct tuple_transform_constexpr_members {};
 template <typename T>
 concept non_void = !std::is_same_v<T, void>;
 
-template <typename TFunc, typename TTuple, template_string... tNames>
-  requires(
-      (requires(
-          TFunc f,
-          named_tuple_element_t<tNames, std::remove_reference_t<TTuple>> e) {
-        {
-          f(std::forward<
-                named_tuple_element_t<tNames, std::remove_reference_t<TTuple>>>(
-                e),
-            tNames)
-          } -> non_void;
-      }) &&
-      ...)
-constexpr void call_for_each(TFunc &&, TTuple &&,
-                             template_string_list_t<tNames...>) {}
+template <typename T, typename... Ts>
+concept function_returns_non_void = requires(T t, Ts... args) {
+  { std::invoke(t, std::forward<Ts>(args)...) } -> non_void;
+};
 
 template <typename, typename, typename> struct callable_for_each_in_tuple_impl;
 template <typename T, typename TTuple, template_string... tTags>
 struct callable_for_each_in_tuple_impl<T, TTuple,
                                        template_string_list_t<tTags...>>
     : std::bool_constant<(
-          std::is_invocable_v<T, std::string_view,
+          std::is_invocable_v<T, decltype(tTags),
                               decltype(get<tTags>(std::declval<TTuple>()))> &&
-          ...)> {};
+          ...)> {
+  static constexpr bool has_return =
+      (function_returns_non_void<
+           T, decltype(tTags), decltype(get<tTags>(std::declval<TTuple>()))> &&
+       ...);
+};
+
+template <typename T, typename TTuple, template_string... tTags>
+concept callable_for_elements_in_tuple = named_tuple_like<TTuple> &&
+    callable_for_each_in_tuple_impl<T, TTuple,
+                                    template_string_list_t<tTags...>>::value;
 
 template <typename T, typename TTuple>
 concept callable_for_each_in_tuple = named_tuple_like<TTuple> &&
     callable_for_each_in_tuple_impl<T, TTuple, contained_tags_t<TTuple>>::value;
 
-template <typename TFunc, typename TTuple>
-concept func_works_with_tuple_c = has_tags_list<TTuple> &&
-    requires(TFunc f, TTuple t) {
-  call_for_each(f, t, contained_tags_v<std::remove_cvref_t<TTuple>>);
-};
+template <typename T, typename TTuple>
+concept transform_function_c = callable_for_each_in_tuple<T, TTuple> &&
+    callable_for_each_in_tuple_impl<T, TTuple,
+                                    contained_tags_t<TTuple>>::has_return;
 
-template <typename TTuple, func_works_with_tuple_c<TTuple> TFunc>
+template <typename TTuple, transform_function_c<TTuple> TFunc>
 class tuple_transform_t {
   TTuple tuple_;
   TFunc f_;
@@ -633,28 +631,19 @@ public:
   get(tuple_transform_t<TTuple2, TFunc2> const &t);
   template <template_string tTag, typename TFunc2, typename TTuple2>
   friend constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &&t);
-  template <std::size_t tIndex, typename TFunc2, typename TTuple2>
-  friend constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t);
 };
 
 template <template_string tTag, typename TFunc2, typename TTuple2>
 constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t) {
-  using type = decltype(get<tTag>(t.tuple_));
-  return t.f_(get<tTag>(t.tuple_), tTag);
+  return t.f_(tTag, get<tTag>(t.tuple_));
 }
 template <template_string tTag, typename TFunc2, typename TTuple2>
 constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> const &t) {
-  using type = decltype(get<tTag>(t.tuple_));
-  return t.f_(get<tTag>(t.tuple_), tTag);
+  return t.f_(tTag, get<tTag>(t.tuple_));
 }
 template <template_string tTag, typename TFunc2, typename TTuple2>
 constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &&t) {
-  using type = decltype(get<tTag>(std::move(t.tuple_)));
-  return t.f_(get<tTag>(std::move(t.tuple_)), tTag);
-}
-template <std::size_t tIndex, typename TFunc2, typename TTuple2>
-constexpr decltype(auto) get(tuple_transform_t<TTuple2, TFunc2> &t) {
-  return t.f_(get<tIndex>(t.tuple_));
+  return t.f_(tTag, get<tTag>(std::move(t.tuple_)));
 }
 
 template <has_tags_list... TTuples> class named_tuple_cat_view;
@@ -945,8 +934,7 @@ apply(auto &&callable, TNamedTuple &&t,
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t), arg_list);
 }
 
-template <named_tuple_like TTuple,
-          details::func_works_with_tuple_c<TTuple> TFunc>
+template <named_tuple_like TTuple, details::transform_function_c<TTuple> TFunc>
 constexpr details::tuple_transform_t<TTuple, TFunc> transform(TFunc f,
                                                               TTuple &&t) {
   return {std::move(f), std::forward<TTuple>(t)};
