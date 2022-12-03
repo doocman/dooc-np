@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <concepts>
+#include <functional>
 #include <numeric>
 #include <span>
 #include <tuple>
