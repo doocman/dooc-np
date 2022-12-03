@@ -79,16 +79,17 @@ constexpr std::size_t find_string(std::string_view str) {
   if (str == tTag) {
     return 0;
   }
-  if constexpr(sizeof...(tTags) > 0) {
+  if constexpr (sizeof...(tTags) > 0) {
     return static_cast<std::size_t>(
-      static_cast<std::ptrdiff_t>(find_string<tTags...>(str)) + 1);
+        static_cast<std::ptrdiff_t>(find_string<tTags...>(str)) + 1);
   } else {
     return 1;
   }
 }
 
 template <template_string... tTags>
-constexpr std::size_t find_string(std::string_view str, template_string_list_t<tTags...>) {
+constexpr std::size_t find_string(std::string_view str,
+                                  template_string_list_t<tTags...>) {
   return find_string<tTags...>(str);
 }
 

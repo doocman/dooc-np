@@ -859,7 +859,7 @@ public:
 
   template <typename T> explicit constexpr operator T() const {
     return std::apply(
-        []<typename... Ts2>(Ts2 && ...args) {
+        []<typename... Ts2>(Ts2 &&...args) {
           return T(std::forward<Ts2>(args)...);
         },
         data_);
