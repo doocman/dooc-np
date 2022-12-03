@@ -10,6 +10,7 @@
 #include <concepts>
 #include <numeric>
 #include <span>
+#include <tuple>
 #include <type_traits>
 
 #include <dooc/concepts.hpp>

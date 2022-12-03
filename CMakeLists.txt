@@ -1,4 +1,4 @@
-#          Copyright Robin Söderholm 2021 - 2022.
+#          Copyright Robin Sï¿½derholm 2021 - 2022.
 # Distributed under the Boost Software License, Version 1.0.
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          https://www.boost.org/LICENSE_1_0.txt)
@@ -35,6 +35,7 @@ endif()
 
 if(DOOC_NP_TESTS)
     set(CMAKE_CXX_STANDARD 20)
+    enable_testing()
     if("${DOOC_NP_TESTS_GTEST}" STREQUAL "download")
         # This code is copied directly from google.github (url as of writing:
         #  https://google.github.io/googletest/quickstart-cmake.html
