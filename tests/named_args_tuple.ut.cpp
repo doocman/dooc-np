@@ -384,4 +384,11 @@ TEST(NamedArg, DynamicFor) // NOLINT
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1")));
 }
 
+TEST(NamedArg, IsStringInList) // NOLINT
+{
+  EXPECT_THAT(find_string("s1", template_string_list_t<"s1", "s2">()), Eq(0));
+  EXPECT_THAT(find_string("s2", template_string_list_t<"s1", "s2">()), Eq(1));
+  EXPECT_THAT(find_string("s3", template_string_list_t<"s1", "s2">()), Eq(2));
+}
+
 } // namespace dooc
