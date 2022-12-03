@@ -88,18 +88,18 @@ TEST(NamedTuple, GetSlice) // NOLINT
 template <typename, typename>
 constexpr bool function_is_valid_tuple_transform = false;
 
-template <typename TTuple, details::func_works_with_tuple_c<TTuple> TFunc>
+template <typename TTuple, details::transform_function_c<TTuple> TFunc>
 constexpr bool function_is_valid_tuple_transform<TTuple, TFunc> = true;
 
 TEST(NamedTuple, ChainSpliceTransform) // NOLINT
 {
   named_tuple t1("a1"_na(1), "a2"_na(2), "a3"_na = 44);
-  auto t2 = transform([](auto const &a, auto const &) { return a * 3; },
+  auto t2 = transform([](auto const &, auto const &a) { return a * 3; },
                       get_slice_view<"a1", "a2">(t1));
 
   constexpr auto f = [](auto const &) { return 1; };
-  constexpr auto f2 = [](auto const &, auto &&) {};
-  constexpr auto f3 = [](auto const &, auto &&) { return 1; };
+  constexpr auto f2 = [](auto &&, auto const &) {};
+  constexpr auto f3 = [](auto &&, auto const &) { return 1; };
   static_assert(
       !function_is_valid_tuple_transform<std::remove_cvref_t<decltype(t1)>,
                                          std::remove_cvref_t<decltype(f)>>);
@@ -115,7 +115,7 @@ TEST(NamedTuple, ChainSpliceTransform) // NOLINT
   EXPECT_THAT(get<"a1">(t2), Eq(1 * 3));
   EXPECT_THAT(get<"a2">(t2), Eq(2 * 3));
   auto t3 = get_slice_view<"a1", "a2">(
-      transform([](auto const &a, auto const &) { return a * 4; }, t1));
+      transform([](auto const &, auto const &a) { return a * 4; }, t1));
   static_assert(contains_arg<"a1">(t3));
   static_assert(contains_arg<"a2">(t3));
   static_assert(!contains_arg<"a3">(t3));
@@ -180,14 +180,14 @@ TEST(NamedTuple, TransformNamed) // NOLINT
 {
   named_tuple t1("a1"_na = 1, "a2"_na = 1., "a3"_na = 3);
   auto t1t = transform(
-      []<typename T>(T const &arg, auto const &) { return arg * 2; }, t1);
+      []<typename T>(T const &, auto const &arg) { return arg * 2; }, t1);
   EXPECT_THAT(get<"a1">(t1t), Eq(1 * 2));
   EXPECT_THAT(get<"a2">(t1t), Eq(1. * 2));
   EXPECT_THAT(get<"a3">(t1t), Eq(3 * 2));
 
   named_tuple t2("a1"_na = "asdas");
   auto t2t = transform(
-      [](std::string arg, std::string_view name) { return arg.append(name); },
+      [](std::string_view name, std::string arg) { return arg.append(name); },
       t2);
   EXPECT_THAT(get<"a1">(t2t), StrEq("asdasa1"));
 }
@@ -321,7 +321,7 @@ TEST(NamedArg, CatViewOfTransform) // NOLINT
 {
   auto v1_tuple = named_tuple(named_arg<"a1">(1));
   auto v2_tuple_raw = named_tuple(named_arg<"a2">(2));
-  auto v2_tuple = transform([](auto const &v, auto const &) { return v + 1; },
+  auto v2_tuple = transform([](auto const &, auto const &v) { return v + 1; },
                             v2_tuple_raw);
   auto v3_tuple_raw =
       named_tuple(named_arg<"a3">(3), named_arg<"not used">(677));
@@ -335,7 +335,7 @@ TEST(NamedArg, CatViewOfTransform) // NOLINT
   static_assert(has_tags_list<std::remove_cvref_t<decltype(concat_tuple)>>);
 
   auto concat_transformed = transform(
-      [](auto const &v, auto const &) { return v + 1; }, concat_tuple);
+      [](auto const &, auto const &v) { return v + 1; }, concat_tuple);
   EXPECT_THAT(get<"a2">(concat_transformed), Eq(get<"a2">(v2_tuple) + 1));
   EXPECT_THAT(get<"a1">(concat_transformed), Eq(get<"a1">(concat_tuple) + 1));
   EXPECT_THAT(get<"a3">(concat_transformed), Eq(get<"a3">(concat_tuple) + 1));
@@ -382,6 +382,23 @@ TEST(NamedArg, DynamicFor) // NOLINT
   EXPECT_THAT(values_missing, Eq(1));
   EXPECT_THAT(v_ints, ElementsAre(1));
   EXPECT_THAT(v_strings, ElementsAre(StrEq("1")));
+}
+
+TEST(NamedArg, ForEachFunctionOnlyWorksWithChosenElements) // NOLINT
+{
+  auto v1_tuple =
+      named_tuple("1"_na(1), "2"_na(2), "3"_na(std::string_view("not an int")));
+
+  std::vector<int> values;
+  tuple_for_each(
+      [&values](auto const &, int &value) { values.push_back(value); },
+      v1_tuple, template_string_list_t<"1">{});
+  EXPECT_THAT(values, ElementsAre(1));
+  values.clear();
+  tuple_for_each(
+      [&values](auto const &, int &value) { values.push_back(value); },
+      v1_tuple, template_string_list_t<"1", "2">{});
+  EXPECT_THAT(values, ElementsAre(1, 2));
 }
 
 TEST(NamedArg, IsStringInList) // NOLINT
