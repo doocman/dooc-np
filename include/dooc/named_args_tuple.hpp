@@ -13,6 +13,7 @@
 #include <span>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include <dooc/concepts.hpp>
 #include <dooc/type_tag.hpp>
@@ -26,16 +27,18 @@ struct contained_tags<T> : contained_tags<std::remove_cvref_t<T>> {};
 
 template <pure_type T>
   requires(requires(T) {
-    { T::tags_list } -> template_string_list_c;
-  })
+             { T::tags_list } -> template_string_list_c;
+           })
 struct contained_tags<T> {
   static constexpr template_string_list_t value = T::tags_list;
 };
 
 template <typename T>
 concept has_tags_list = requires(T) {
-  { contained_tags<T>::value } -> template_string_list_c;
-};
+                          {
+                            contained_tags<T>::value
+                            } -> template_string_list_c;
+                        };
 
 template <typename T>
 constexpr template_string_list_t contained_tags_v = contained_tags<T>::value;
@@ -109,10 +112,11 @@ struct named_tuple_element<tTag, const volatile T> {
 };
 
 template <typename T>
-concept arg_with_any_name = requires(T) {
-  named_arg_properties<std::remove_cvref_t<T>>::tag;
-  typename named_arg_properties<std::remove_reference_t<T>>::type;
-};
+concept arg_with_any_name =
+    requires(T) {
+      named_arg_properties<std::remove_cvref_t<T>>::tag;
+      typename named_arg_properties<std::remove_reference_t<T>>::type;
+    };
 
 template <arg_with_any_name T, template_string tTag>
 constexpr bool is_tagged_with =
@@ -132,13 +136,15 @@ concept contains_any_of_tags = (arg_with_name<T, tTags> || ...);
 
 template <typename T, template_string tTag, typename T2>
 concept tag_is_type = arg_with_name<T, tTag> && requires(T t) {
-  { get<tTag>(t) } -> std::same_as<T2>;
-};
+                                                  {
+                                                    get<tTag>(t)
+                                                    } -> std::same_as<T2>;
+                                                };
 
 template <typename T>
-concept named_tuple_like = has_tags_list<T> && requires {
-  std::tuple_size<std::remove_cvref_t<T>>::value;
-};
+concept named_tuple_like =
+    has_tags_list<T> &&
+    requires { std::tuple_size<std::remove_cvref_t<T>>::value; };
 
 template <typename T>
 constexpr std::size_t tuple_size_v = std::tuple_size<T>::value;
@@ -240,9 +246,9 @@ constexpr decltype(auto) get(T &&t) {
 template <typename T, template_string tTag> struct named_type {
   template <typename T2>
     requires requires(T2) {
-      typename named_arg_properties<std::remove_cvref_t<T2>>::type;
-      { named_arg_properties<T2>::tag } -> std::equality_comparable;
-    }
+               typename named_arg_properties<std::remove_cvref_t<T2>>::type;
+               { named_arg_properties<T2>::tag } -> std::equality_comparable;
+             }
   static constexpr bool is_equivalent =
       named_arg_properties<T2>::tag == tTag &&
       std::is_convertible_v<typename named_arg_properties<T2>::type, T>;
@@ -250,11 +256,7 @@ template <typename T, template_string tTag> struct named_type {
 };
 template <template_string tTag> struct named_auto {
   template <typename T2>
-    requires requires(T2) {
-      typename named_arg_properties<T2>::type;
-      { named_arg_properties<T2>::tag } -> std::equality_comparable;
-    }
-  static constexpr bool is_equivalent = named_arg_properties<T2>::tag == tTag;
+  static constexpr bool is_equivalent = arg_with_name<T2, tTag>;
   static constexpr bool optional = false;
 };
 template <typename T, template_string tTag> struct optional_typed_arg {
@@ -273,27 +275,29 @@ template <template_string tTag> struct optional_auto_arg {
 namespace details {
 template <typename TReq, typename... TArgs>
   requires(requires(TReq) {
-    {
-      TReq::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-    { TReq::optional } -> std::convertible_to<bool>;
-  })
-constexpr bool is_equivalent_with_any =
-    TReq::optional || (TReq::template is_equivalent<TArgs> || ...);
+             {
+               TReq::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+             { TReq::optional } -> std::convertible_to<bool>;
+           })
+constexpr bool is_equivalent_with_any = TReq::optional ||
+                                        (TReq::template is_equivalent<TArgs> ||
+                                         ...);
 
 template <typename TArg, typename... TReqs>
   requires(requires(TReqs) {
-    {
-      TReqs::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-  } && ...)
-constexpr bool is_any_equivalent_with =
-    (TReqs::template is_equivalent<TArg> || ...);
+             {
+               TReqs::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+           } && ...)
+constexpr bool is_any_equivalent_with = (TReqs::template is_equivalent<TArg> ||
+                                         ...);
 
 template <typename T>
 concept pure_type_c = std::is_same_v<T, std::remove_cvref_t<T>>;
 template <typename T>
-concept non_pure_type_c = !pure_type_c<T>;
+concept non_pure_type_c = !
+pure_type_c<T>;
 
 } // namespace details
 template <template_string tTag, typename TTuple>
@@ -305,40 +309,32 @@ constexpr bool contains_arg_v<tTag, TTuple> =
 
 template <template_string tTag, details::pure_type_c TTuple>
   requires(requires() {
-    { contained_tags<TTuple>::value } -> template_string_list_c;
-  })
+             { contained_tags<TTuple>::value } -> template_string_list_c;
+           })
 constexpr bool contains_arg_v<tTag, TTuple> =
     details::index_of_template_string_list<tTag>(contained_tags_v<TTuple>) !=
     contained_tags_v<TTuple>.size();
 
+template <typename... Ts2> struct _is_equivalent_with_any_wrapper {
+  template <typename T>
+  static constexpr bool value = details::is_equivalent_with_any<T, Ts2...>;
+};
 template <typename... Ts>
   requires(requires(Ts) {
-    {
-      Ts::template is_equivalent<named_arg_t<"na", int>>
-      } -> std::convertible_to<bool>;
-  } && ...)
+             {
+               Ts::template is_equivalent<named_arg_t<"na", int>>
+               } -> std::convertible_to<bool>;
+           } && ...)
 struct arg_list {
 private:
+  template <typename T>
+  static constexpr bool _is_any_equivalent_with =
+      details::is_any_equivalent_with<T, Ts...>;
+
   template <typename... Ts2> static constexpr bool fullfilled_by_impl() {
-    constexpr auto is_fullfilled_f = []<typename T>(T const &) {
-      if constexpr (details::is_equivalent_with_any<T, Ts2...>)
-        return std::true_type();
-      else
-        return std::false_type();
-    };
-    constexpr auto fullfills_any_f = []<typename T2>(T2 const &) {
-      if constexpr (details::is_any_equivalent_with<T2, Ts...>)
-        return std::true_type{};
-      else
-        return std::false_type{};
-    };
-    if constexpr ((decltype(is_fullfilled_f(std::declval<Ts>()))::value &&
-                   ...) &&
-                  (decltype(fullfills_any_f(std::declval<Ts2>()))::value &&
-                   ...))
-      return true;
-    else
-      return false;
+    using is_eq_wrapp = _is_equivalent_with_any_wrapper<Ts2...>;
+    return ((is_eq_wrapp::template value<Ts> && ...) &&
+            (_is_any_equivalent_with<Ts2> && ...));
   }
 
 public:
@@ -385,8 +381,9 @@ private:
 public:
   static constexpr template_string_list_t<tTags...> tags_list{};
   constexpr named_tuple() noexcept(
-      std::is_nothrow_default_constructible_v<std::tuple<
-          Ts...>>) requires(std::is_default_constructible_v<data_t>) = default;
+      std::is_nothrow_default_constructible_v<std::tuple<Ts...>>)
+    requires(std::is_default_constructible_v<data_t>)
+  = default;
 
   template <typename... Us>
     requires(sizeof...(Us) == sizeof...(Ts) &&
@@ -458,9 +455,9 @@ public:
 };
 
 template <typename... Ts>
-  requires(is_named_arg<std::remove_cvref_t<Ts>> &&...)
-constexpr named_tuple<std::remove_cvref_t<Ts>...>
-make_named_args(Ts &&...args) {
+  requires(is_named_arg<std::remove_cvref_t<Ts>> && ...)
+constexpr named_tuple<std::remove_cvref_t<Ts>...> make_named_args(
+    Ts &&...args) {
   return named_tuple<std::remove_reference_t<Ts>...>{std::forward<Ts>(args)...};
 }
 
@@ -582,12 +579,14 @@ struct get_slice_help<template_string_list_t<tTags...>> {
 template <typename> struct tuple_transform_constexpr_members {};
 
 template <typename T>
-concept non_void = !std::is_same_v<T, void>;
+concept non_void = !
+std::is_same_v<T, void>;
 
 template <typename T, typename... Ts>
-concept function_returns_non_void = requires(T t, Ts... args) {
-  { std::invoke(t, std::forward<Ts>(args)...) } -> non_void;
-};
+concept function_returns_non_void =
+    requires(T t, Ts... args) {
+      { std::invoke(t, std::forward<Ts>(args)...) } -> non_void;
+    };
 
 template <typename, typename, typename> struct callable_for_each_in_tuple_impl;
 template <typename T, typename TTuple, template_string... tTags>
@@ -604,16 +603,19 @@ struct callable_for_each_in_tuple_impl<T, TTuple,
 };
 
 template <typename T, typename TTuple, template_string... tTags>
-concept callable_for_elements_in_tuple = named_tuple_like<TTuple> &&
+concept callable_for_elements_in_tuple =
+    named_tuple_like<TTuple> &&
     callable_for_each_in_tuple_impl<T, TTuple,
                                     template_string_list_t<tTags...>>::value;
 
 template <typename T, typename TTuple>
-concept callable_for_each_in_tuple = named_tuple_like<TTuple> &&
+concept callable_for_each_in_tuple =
+    named_tuple_like<TTuple> &&
     callable_for_each_in_tuple_impl<T, TTuple, contained_tags_t<TTuple>>::value;
 
 template <typename T, typename TTuple>
-concept transform_function_c = callable_for_each_in_tuple<T, TTuple> &&
+concept transform_function_c =
+    callable_for_each_in_tuple<T, TTuple> &&
     callable_for_each_in_tuple_impl<T, TTuple,
                                     contained_tags_t<TTuple>>::has_return;
 
@@ -929,10 +931,10 @@ constexpr decltype(auto) apply(auto &&callable, TNamedTuple &&t) noexcept {
 }
 
 template <typename TNamedTuple, template_string... tArgOrder>
-  requires(contains_arg_v<tArgOrder, std::remove_cvref_t<TNamedTuple>> &&...)
+  requires(contains_arg_v<tArgOrder, std::remove_cvref_t<TNamedTuple>> && ...)
 constexpr decltype(auto)
-apply(auto &&callable, TNamedTuple &&t,
-      template_string_list_t<tArgOrder...> arg_list) noexcept {
+    apply(auto &&callable, TNamedTuple &&t,
+          template_string_list_t<tArgOrder...> arg_list) noexcept {
   return details::apply_impl_(callable, std::forward<TNamedTuple>(t), arg_list);
 }
 
