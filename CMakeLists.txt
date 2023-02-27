@@ -37,6 +37,10 @@ if(DOOC_NP_TESTS)
     set(CMAKE_CXX_STANDARD 20)
     enable_testing()
     if("${DOOC_NP_TESTS_GTEST}" STREQUAL "download")
+    
+        if(POLICY CMP0135)
+            cmake_policy(SET CMP0135 NEW)
+        endif()
         # This code is copied directly from google.github (url as of writing:
         #  https://google.github.io/googletest/quickstart-cmake.html
         # Only commit-SHA has been changed.
