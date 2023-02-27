@@ -16,10 +16,18 @@ template <typename... Ts>
 constexpr inline void dooc_np_unused(Ts const &...) noexcept {}
 } // namespace details
 template <std::size_t tN> struct template_string {
-  std::array<char, tN - 1> data_;
+private:
+  using data_t = std::array<char, tN - 1>;
+
+public:
+  data_t data_;
   using size_type = std::size_t;
 
   using string_t = char[tN];
+  using iterator = typename data_t::iterator;
+  using const_iterator = typename data_t::const_iterator;
+
+  template_string() = default;
 
   explicit(false) constexpr template_string(
       string_t const &string_in) noexcept {
@@ -31,10 +39,27 @@ template <std::size_t tN> struct template_string {
     using std::begin;
     std::copy_n(begin(string_in), data_.size(), begin(data_));
   }
+  explicit constexpr template_string(
+      std::ranges::input_range auto const &string_in) noexcept {
+    using std::begin;
+    std::copy_n(begin(string_in), data_.size(), begin(data_));
+  }
+  template <std::input_iterator TIt, std::sentinel_for<TIt> TSent>
+  constexpr template_string(TIt beg, TSent end) noexcept {
+    std::copy(beg, end, std::begin(data_));
+  }
 
   constexpr operator std::string_view() const noexcept {
     return {data_.data(), data_.size()};
   }
+  constexpr iterator begin() noexcept { return std::begin(data_); }
+  constexpr const_iterator cbegin() const noexcept {
+    return std::cbegin(data_);
+  }
+  constexpr const_iterator begin() const noexcept { return cbegin(); }
+  constexpr iterator end() noexcept { return std::end(data_); }
+  constexpr const_iterator cend() const noexcept { return std::cend(data_); }
+  constexpr const_iterator end() const noexcept { return cend(); }
 };
 
 template <std::size_t tN>
@@ -48,6 +73,32 @@ constexpr bool operator==(T const &lhs, template_string<tN> const &rhs) {
   return static_cast<std::string_view>(lhs) ==
          static_cast<std::string_view>(rhs);
 }
+
+namespace details {
+template <std::size_t tN, std::size_t... tNs>
+constexpr auto concat_to_it(auto dest, template_string<tN> const &c,
+                            template_string<tNs> const &...rest) {
+  using std::begin, std::end;
+  dest = std::copy_n(begin(c), static_cast<std::ptrdiff_t>(tN - 1), dest);
+  if constexpr (sizeof...(tNs) > 0) {
+    return concat_to_it(dest, rest...);
+  } else {
+    return dest;
+  }
+}
+} // namespace details
+template <std::size_t... tNs,
+          std::size_t tFullSize = (tNs + ...) + 1 - sizeof...(tNs)>
+constexpr template_string<tFullSize>
+concat(template_string<tNs> const &...str) {
+  using std::begin;
+  template_string<tFullSize> data;
+  auto end_it = details::concat_to_it(begin(data), str...);
+  return template_string<tFullSize>(data);
+}
+
+static_assert(concat(template_string("ab"), template_string("cb")) ==
+              template_string("abcb"));
 
 template <template_string... tTags> struct template_string_list_t {
   static constexpr std::size_t size() noexcept { return sizeof...(tTags); }
