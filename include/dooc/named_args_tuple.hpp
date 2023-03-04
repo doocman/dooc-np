@@ -46,7 +46,7 @@ template <typename T>
 using contained_tags_t = std::remove_cvref_t<decltype(contained_tags_v<T>)>;
 
 template <template_string, typename T> struct named_arg_t;
-template <typename...> struct named_tuple;
+template <typename...> class named_tuple;
 template <typename> struct named_arg_properties;
 template <typename T>
   requires(!std::is_same_v<T, std::remove_reference_t<T>>)
