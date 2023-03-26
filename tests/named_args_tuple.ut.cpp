@@ -28,6 +28,12 @@ static_assert(function_compiles_f([]() {}));
 static_assert(function_compiles_f([](int) {}, 1));
 static_assert(!function_compiles_f([](int) {}, "not an int"));
 
+// Check that empty template_string compiles:
+constexpr template_string some_empty_string{""};
+
+static_assert(concat(template_string{"hello"}, some_empty_string) ==
+              template_string{"hello"});
+
 TEST(NamedTuple, Creation) // NOLINT
 {
   auto a2 = "hi there!"sv;
@@ -260,8 +266,7 @@ struct optional_arg_impl {
     requires(args_fullfill<arg_list<optional_typed_arg<int, "arg1">,
                                     optional_auto_arg<"arg2">>,
                            Ts...>)
-  std::pair<bool, bool>
-  operator()(Ts const &...) const {
+  std::pair<bool, bool> operator()(Ts const &...) const {
     return {arg_provided<"arg1", Ts...>, arg_provided<"arg2", Ts...>};
   }
 };
