@@ -1,4 +1,4 @@
-#          Copyright Robin Söderholm 2021 - 2022.
+#          Copyright Robin SÃ¶derholm 2021 - 2022.
 # Distributed under the Boost Software License, Version 1.0.
 #    (See accompanying file LICENSE_1_0.txt or copy at
 #          https://www.boost.org/LICENSE_1_0.txt)
@@ -25,4 +25,4 @@ target_link_libraries(${CURRENT_TARGET_NAME}
         )
 set_property(TARGET ${CURRENT_TARGET_NAME} PROPERTY CXX_STANDARD 20)
 
-gtest_discover_tests(${CURRENT_TARGET_NAME})
+gtest_discover_tests(${CURRENT_TARGET_NAME} DISCOVERY_MODE POST_BUILD)

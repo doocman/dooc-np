@@ -96,7 +96,7 @@ constexpr template_string<tFullSize>
 concat(template_string<tNs> const &...str) {
   using std::begin;
   template_string<tFullSize> data;
-  auto end_it = details::concat_to_it(begin(data), str...);
+  details::concat_to_it(begin(data), str...);
   return template_string<tFullSize>(data);
 }
 
