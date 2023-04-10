@@ -17,7 +17,7 @@ constexpr inline void dooc_np_unused(Ts const &...) noexcept {}
 } // namespace details
 template <std::size_t tN> struct template_string {
 private:
-  using data_t = std::array<char, tN - 1>;
+  using data_t = std::array<char, std::max(tN - 1, std::size_t{1u})>;
 
 public:
   data_t data_;
@@ -47,6 +47,9 @@ public:
   template <std::input_iterator TIt, std::sentinel_for<TIt> TSent>
   constexpr template_string(TIt beg, TSent end) noexcept {
     std::copy(beg, end, std::begin(data_));
+  }
+  constexpr std::size_t size() const noexcept {
+    return std::max(tN, std::size_t{1u}) - 1u;
   }
 
   constexpr operator std::string_view() const noexcept {
@@ -79,7 +82,7 @@ template <std::size_t tN, std::size_t... tNs>
 constexpr auto concat_to_it(auto dest, template_string<tN> const &c,
                             template_string<tNs> const &...rest) {
   using std::begin, std::end;
-  dest = std::copy_n(begin(c), static_cast<std::ptrdiff_t>(tN - 1), dest);
+  dest = std::copy_n(begin(c), std::ssize(c), dest);
   if constexpr (sizeof...(tNs) > 0) {
     return concat_to_it(dest, rest...);
   } else {
