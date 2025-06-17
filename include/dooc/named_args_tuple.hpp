@@ -993,11 +993,11 @@ constexpr std::ptrdiff_t dynamic_for_each(TFunc &&f, TTuple &&t,
 
 namespace tuple_literals {
 template <template_string tTag>
-constexpr details::to_named_arg_t<tTag> operator"" _na() noexcept {
+constexpr details::to_named_arg_t<tTag> operator""_na() noexcept {
   return {};
 }
 template <template_string tTag>
-constexpr details::get_named_arg_t<tTag> operator"" _from() noexcept {
+constexpr details::get_named_arg_t<tTag> operator""_from() noexcept {
   return {};
 }
 } // namespace tuple_literals
